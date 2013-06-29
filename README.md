@@ -1,7 +1,7 @@
 itrace
 ======
 
-Tracks runtime assembly instruction execution in programs
+Tracks runtime instruction execution in programs
 
 
 Usage:
