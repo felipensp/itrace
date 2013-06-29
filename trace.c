@@ -117,7 +117,8 @@ static void _trace_abort_execution()
 {
 	printf("[!] Detaching...\n");
 	ptrace_detach(tracee.pid);
-	exit(0);
+	kill(tracee.pid, SIGINT);
+	exit(1);
 }
 
 void trace_loop()
@@ -146,8 +147,15 @@ void trace_loop()
 		if (signo == SIGTRAP) {
 			signo = 0;
 		} else {
-			ptrace(PTRACE_CONT, tracee.pid, 0, signo);
-			break;
+			switch (signo) {
+				case SIGHUP:
+				case SIGINT:
+				case SIGSEGV:
+					ptrace(PTRACE_CONT, tracee.pid, 0, signo);
+					goto out;
+				default:
+					break;
+			}
 		}
 
 		ptrace(PTRACE_GETREGS, tracee.pid, NULL, &regs);
@@ -166,5 +174,6 @@ void trace_loop()
 			}
 		}
 	}
+out:
 	printf("[!] Program exited with status %d\n", WEXITSTATUS(status));
 }
