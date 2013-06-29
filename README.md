@@ -5,6 +5,9 @@ Tracks runtime instruction execution in programs
 
 Requirements: libudis86
 
+Author: Felipe Pena
+Contact: felipensp [at] gmail [dot] com
+
 
 Usage:
 ```
