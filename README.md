@@ -5,6 +5,19 @@ Tracks runtime instruction execution in programs
 
 
 Usage:
+```
+itrace [options]
+-c, --command     Program to be started and traced
+-h, --help        Show this help
+-n, --max-inst    Max number of instruction to trace
+-o, --offset      Address to start tracing
+-p, --pid         Attach to supplied pid
+-r, --show-regs   Dump registers on each instruction
+-s, --show-stack  Dump part of stack from top on each instruction
+-v, --version     Show the version
+```
+
+Example:
 
 ```
 $ ./itrace -o 0x400589 -s -c ../overflow1 CBBBBBBBBAAAAAAAA
