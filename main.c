@@ -35,13 +35,14 @@ int main(int argc, char **argv)
 	char c;
 	int opt_index = 0;
 	static struct option long_opts[] = {
-		{"command",   required_argument, 0, 'c'},
-		{"help",      no_argument,       0, 'h'},
-		{"max-inst",  required_argument, 0, 'n'},
-		{"pid",       required_argument, 0, 'p'},
-		{"show-regs", no_argument,       0, 'r'},
-		{"start",     required_argument, 0, 's'},
-		{"version",   no_argument,       0, 'v'},
+		{"command",    required_argument, 0, 'c'},
+		{"help",       no_argument,       0, 'h'},
+		{"max-inst",   required_argument, 0, 'n'},
+		{"offset",     required_argument, 0, 'o'},
+		{"pid",        required_argument, 0, 'p'},
+		{"show-regs",  no_argument,       0, 'r'},
+		{"show-stack", no_argument,       0, 's'},
+		{"version",    no_argument,       0, 'v'},
 		{0, 0, 0, 0}
 	};
 
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	while ((c = getopt_long(argc, argv, "c:hn:p:rs:v", long_opts, &opt_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:hn:o:p:rsv", long_opts, &opt_index)) != -1) {
 		switch (c) {
 			case 'c':
 				tracee.prog = optarg;
@@ -65,6 +66,10 @@ int main(int argc, char **argv)
 				tracee.num_inst = atol(optarg);
 				break;
 
+			case 'o':
+				sscanf(optarg, "%lx", &tracee.offset);
+				break;
+
 			case 'p':
 				tracee.pid = atol(optarg);
 				break;
@@ -74,7 +79,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 's':
-				sscanf(optarg, "%lx", &tracee.offset);
+				tracee.show_stack = 1;
 				break;
 
 			case 'v':

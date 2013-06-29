@@ -72,16 +72,11 @@ void trace_dump_instr(const struct user_regs_struct *regs)
 	}
 
 	if (tracee.show_regs) {
-		/* Displays register information */
-		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
-		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
-		printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
-		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
-		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
-		printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
-		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
-		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
-		printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
+		trace_dump_regs(regs);
+	}
+
+	if (tracee.show_stack) {
+		trace_dump_stack(regs);
 	}
 
 	/* Displays three instructions after eip */
@@ -89,6 +84,34 @@ void trace_dump_instr(const struct user_regs_struct *regs)
 
 	printf("%#" PRIxPTR ":\t%-20s\t%s\n",
 		addr, ud_insn_hex(&ud_obj), ud_insn_asm(&ud_obj));
+}
+
+void trace_dump_regs(const struct user_regs_struct *regs)
+{
+	/* Displays register information */
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
+	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
+	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
+	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
+}
+
+void trace_dump_stack(const struct user_regs_struct *regs)
+{
+	long addr;
+	int i;
+
+	/* Displays 4 long from the top of stack */
+	printf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
+	for (i = 0; i < 4; ++i) {
+		ptrace_read(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
+		printf("0x%" ADDR_FMT " ", addr);
+	}
+	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
 }
 
 void _trace_abort_execution()
@@ -102,10 +125,7 @@ void trace_loop()
 {
 	int status, signo = 0, active = (tracee.offset == 0);
 	unsigned int counter = 0;
-	siginfo_t si;
 	struct user_regs_struct regs;
-
-	memset(&si, 0, sizeof(siginfo_t));
 
 	signal(SIGINT, _trace_abort_execution);
 
@@ -126,13 +146,12 @@ void trace_loop()
 
 		if (signo == SIGTRAP) {
 			signo = 0;
-		} else if (signo == SIGHUP || signo == SIGINT) {
+		} else if (signo == SIGHUP || signo == SIGINT || signo == SIGSEGV) {
 			ptrace(PTRACE_CONT, tracee.pid, 0, signo);
 			break;
 		}
 
 		ptrace(PTRACE_GETREGS, tracee.pid, NULL, &regs);
-		ptrace(PTRACE_GETSIGINFO, tracee.pid, NULL, &si);
 
 		if (!active) {
 			active = (tracee.offset == regs.reg_eip);
@@ -148,8 +167,5 @@ void trace_loop()
 			}
 		}
 	}
-
-	if (WTERMSIG(status)) {
-		printf("[!] Program terminated with signal %d\n", WTERMSIG(status));
-	}
+	printf("[!] Program exited with status %d\n", WEXITSTATUS(status));
 }

@@ -46,12 +46,15 @@ typedef struct {
 	uintptr_t offset;      /* eip offset to start tracing */
 	unsigned int num_inst; /* Max number of instruction to trace */
 	int show_regs;         /* Indicates if the registers should be dumped */
+	int show_stack;        /* Indicates if the stack must be dumped */
 } trace_info;
 
 pid_t trace_pid();
 pid_t trace_program();
 void trace_loop();
 void trace_dump_instr(const struct user_regs_struct*);
+void trace_dump_regs(const struct user_regs_struct*);
+void trace_dump_stack(const struct user_regs_struct*);
 
 extern trace_info tracee;
 
