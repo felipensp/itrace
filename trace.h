@@ -14,8 +14,11 @@
 
 #define STRFY(x)  STRFY2(x)
 #define STRFY2(x) #x
-#define STRL(x)   x, sizeof(x)
 
+/*
+ * Helper macro to handle user_regs_struct's field names
+ * based on the architecture
+ */
 #if defined(__x86_64__)
 # define ADDR_FMT "016lx"
 # define reg_eip rip
@@ -40,15 +43,26 @@
 # define reg_ebp ebp
 #endif
 
+/*
+ * Flags to handle option related to what to show on the trace
+ */
+typedef enum {
+	SHOW_REGISTERS = 1<<0,
+	SHOW_STACK     = 1<<1,
+	SHOW_COMMENTS  = 1<<2
+} trace_show_opts;
+
+/*
+ * General information of tracee and argument options
+ */
 typedef struct {
 	const char *prog;         /* program to start and trace                  */
 	char * const *prog_args;  /* program arguments                           */
 	pid_t pid;                /* pid of tracee program                       */
 	uintptr_t offset;         /* eip offset to start tracing                 */
 	unsigned int num_inst;    /* Max number of instruction to trace          */
-	int show_regs;            /* Indicates if the registers should be dumped */
-	int show_stack;           /* Indicates if the stack must be dumped       */
-	int show_comments;        /* Indicates if the comments is allowed        */
+	int syntax;               /* Assembly syntax (0 = at&t, 1 = intel)       */
+	int flags;                /* Flags to handle options to show information */
 } trace_info;
 
 pid_t trace_pid();

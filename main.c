@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <string.h>
 #include "trace.h"
 
 trace_info tracee;
@@ -23,6 +24,7 @@ static void usage()
 		 "-p, --pid         Attach to supplied pid\n"
 		 "-r, --show-regs   Dump registers on each instruction\n"
 		 "-s, --show-stack  Dump part of stack from top on each instruction\n"
+		 "-S, --syntax      Choose the syntax to be used on disassemble\n"
 		 "-v, --version     Show the version\n");
 }
 
@@ -45,6 +47,7 @@ int main(int argc, char **argv)
 		{"pid",        required_argument, 0, 'p'},
 		{"show-regs",  no_argument,       0, 'r'},
 		{"show-stack", no_argument,       0, 's'},
+		{"syntax",     required_argument, 0, 'S'},
 		{"version",    no_argument,       0, 'v'},
 		{0, 0, 0, 0}
 	};
@@ -54,7 +57,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	while ((c = getopt_long(argc, argv, "c:Chn:o:p:rsv", long_opts, &opt_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:Chn:o:p:rsS:v", long_opts, &opt_index)) != -1) {
 		switch (c) {
 			case 'c':
 				tracee.prog = optarg;
@@ -62,7 +65,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'C':
-				tracee.show_comments = 1;
+				tracee.flags |= SHOW_COMMENTS;
 				break;
 
 			case 'h':
@@ -82,11 +85,17 @@ int main(int argc, char **argv)
 				break;
 
 			case 'r':
-				tracee.show_regs = 1;
+				tracee.flags |= SHOW_REGISTERS;
 				break;
 
 			case 's':
-				tracee.show_stack = 1;
+				tracee.flags |= SHOW_STACK;
+				break;
+
+			case 'S':
+				if (strcasecmp(optarg, "intel") == 0) {
+					tracee.syntax = 1;
+				}
 				break;
 
 			case 'v':

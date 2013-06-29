@@ -109,25 +109,25 @@ static void _dump_instr(const struct user_regs_struct *regs)
 	ud_set_mode(&ud_obj, 64);
 	ud_set_vendor(&ud_obj, UD_VENDOR_AMD);
 	ud_set_pc(&ud_obj, 0);
-	ud_set_syntax(&ud_obj, UD_SYN_ATT);
+	ud_set_syntax(&ud_obj, tracee.syntax ? UD_SYN_INTEL : UD_SYN_ATT);
 	ud_set_input_buffer(&ud_obj, instrs, sizeof(instrs)-1);
 
 	for (i = 0; i < sizeof(instrs) / sizeof(long); i += sizeof(long)) {
-		ptrace_read(tracee.pid, regs->reg_eip, &value);
+		ptrace_read(tracee.pid, regs->reg_eip + (sizeof(long) * i), &value);
 		memcpy(instrs + (sizeof(long) * i), &value, sizeof(long));
 	}
 
-	if (tracee.show_regs) {
+	if (tracee.flags & SHOW_REGISTERS) {
 		_dump_regs(regs);
 	}
 
-	if (tracee.show_stack) {
+	if (tracee.flags & SHOW_STACK) {
 		_dump_stack(regs);
 	}
 
 	ud_disassemble(&ud_obj);
 
-	if (tracee.show_comments) {
+	if (tracee.flags & SHOW_COMMENTS) {
 		comment = _instr_comments(&ud_obj, regs);
 	}
 
