@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <libudis86/extern.h>
 #include <libudis86/types.h>
 #include "trace.h"
@@ -25,9 +26,29 @@ pid_t trace_pid(pid_t pid)
 	return pid;
 }
 
-pid_t trace_program(const char *program)
+pid_t trace_program()
 {
-	return 0;
+	pid_t child;
+	int nargs;
+
+	assert(tracee.prog != NULL);
+
+	printf("[+] Starting and tracing `%s'\n", tracee.prog);
+
+	for (nargs = 0; tracee.prog_args[nargs]; ++nargs) {
+		printf("Arg[%d]: %s\n", nargs, tracee.prog_args[nargs]);
+	}
+
+	if ((child = fork()) == 0) {
+		if (ptrace_traceme() < 0) {
+			puts("[!] ptrace_traceme failed!");
+			exit(1);
+		}
+		execv(tracee.prog, tracee.prog_args);
+		exit(0);
+	}
+
+	return child;
 }
 
 void trace_dump_instr(const struct user_regs_struct *regs)
@@ -50,21 +71,23 @@ void trace_dump_instr(const struct user_regs_struct *regs)
 		memcpy(instrs + (sizeof(long) * i), &value, sizeof(long));
 	}
 
-	/* Displays register information */
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
+	if (tracee.show_regs) {
+		/* Displays register information */
+		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
+		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
+		printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
+		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
+		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
+		printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
+		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
+		printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
+		printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
+	}
 
 	/* Displays three instructions after eip */
 	ud_disassemble(&ud_obj);
 
-	printf("%#" PRIxPTR ":\t%-15s\t%s\n",
+	printf("%#" PRIxPTR ":\t%-20s\t%s\n",
 		addr, ud_insn_hex(&ud_obj), ud_insn_asm(&ud_obj));
 }
 
@@ -124,5 +147,9 @@ void trace_loop()
 				break;
 			}
 		}
+	}
+
+	if (WTERMSIG(status)) {
+		printf("[!] Program terminated with signal %d\n", WTERMSIG(status));
 	}
 }

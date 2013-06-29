@@ -40,13 +40,16 @@
 #endif
 
 typedef struct {
+	const char *prog;   /* program to start and trace */
+	char * const * prog_args;
 	pid_t pid;             /* pid of tracee program */
 	uintptr_t offset;      /* eip offset to start tracing */
 	unsigned int num_inst; /* Max number of instruction to trace */
+	int show_regs;         /* Indicates if the registers should be dumped */
 } trace_info;
 
-pid_t trace_pid(pid_t);
-pid_t trace_program(const char*);
+pid_t trace_pid();
+pid_t trace_program();
 void trace_loop();
 void trace_dump_instr(const struct user_regs_struct*);
 
