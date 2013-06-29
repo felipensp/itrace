@@ -10,13 +10,16 @@ Usage:
 ```
 itrace [options]
 -c, --command     Program to be started and traced
+-C, --comments    Show comments after disassembled instruction
 -h, --help        Show this help
 -n, --max-inst    Max number of instruction to trace
 -o, --offset      Address to start tracing
 -p, --pid         Attach to supplied pid
 -r, --show-regs   Dump registers on each instruction
 -s, --show-stack  Dump part of stack from top on each instruction
+-S, --syntax      Choose the syntax to be used on disassemble
 -v, --version     Show the version
+
 ```
 
 Example:
