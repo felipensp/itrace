@@ -16,6 +16,7 @@ static void usage()
 {
 	puts("itrace [options]\n"
 		 "-c, --command     Program to be started and traced\n"
+		 "-C, --comments    Show comments after disassembled instruction\n"
 		 "-h, --help        Show this help\n"
 		 "-n, --max-inst    Max number of instruction to trace\n"
 		 "-o, --offset      Address to start tracing\n"
@@ -37,6 +38,7 @@ int main(int argc, char **argv)
 	int opt_index = 0;
 	static struct option long_opts[] = {
 		{"command",    required_argument, 0, 'c'},
+		{"comments",   no_argument,       0, 'C'},
 		{"help",       no_argument,       0, 'h'},
 		{"max-inst",   required_argument, 0, 'n'},
 		{"offset",     required_argument, 0, 'o'},
@@ -52,11 +54,15 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	while ((c = getopt_long(argc, argv, "c:hn:o:p:rsv", long_opts, &opt_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:Chn:o:p:rsv", long_opts, &opt_index)) != -1) {
 		switch (c) {
 			case 'c':
 				tracee.prog = optarg;
 				tracee.prog_args = (char* const*)&argv[optind-1];
+				break;
+
+			case 'C':
+				tracee.show_comments = 1;
 				break;
 
 			case 'h':

@@ -51,7 +51,7 @@ pid_t trace_program()
 	return child;
 }
 
-static void trace_dump_regs(const struct user_regs_struct *regs)
+static void _dump_regs(const struct user_regs_struct *regs)
 {
 	/* Displays register information */
 	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
@@ -65,7 +65,7 @@ static void trace_dump_regs(const struct user_regs_struct *regs)
 	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
 }
 
-static void trace_dump_stack(const struct user_regs_struct *regs)
+static void _dump_stack(const struct user_regs_struct *regs)
 {
 	long addr;
 	int i;
@@ -79,9 +79,27 @@ static void trace_dump_stack(const struct user_regs_struct *regs)
 	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
 }
 
-static void trace_dump_instr(const struct user_regs_struct *regs)
+static char* _instr_comments(ud_t *ud_obj,
+	const struct user_regs_struct *regs)
+{
+	const char *instr = ud_insn_asm(ud_obj);
+
+	if (memcmp(instr, "syscall", sizeof("syscall")-1) == 0
+		|| memcmp(instr, "int $0x80", sizeof("int $0x80")-1) == 0) {
+		char *comment = malloc(sizeof(char) * 50);
+
+		snprintf(comment, 50, " # %s = %ld",
+			STRFY(reg_eax), regs->reg_eax);
+
+		return comment;
+	}
+	return NULL;
+}
+
+static void _dump_instr(const struct user_regs_struct *regs)
 {
 	unsigned char instrs[16] = {0};
+	char *comment = NULL;
 	long value;
 	ud_t ud_obj;
 	int i;
@@ -100,20 +118,28 @@ static void trace_dump_instr(const struct user_regs_struct *regs)
 	}
 
 	if (tracee.show_regs) {
-		trace_dump_regs(regs);
+		_dump_regs(regs);
 	}
 
 	if (tracee.show_stack) {
-		trace_dump_stack(regs);
+		_dump_stack(regs);
 	}
 
 	ud_disassemble(&ud_obj);
 
-	printf("%#" PRIxPTR ":\t%-20s\t%s\n",
-		addr, ud_insn_hex(&ud_obj), ud_insn_asm(&ud_obj));
+	if (tracee.show_comments) {
+		comment = _instr_comments(&ud_obj, regs);
+	}
+
+	printf("%#" PRIxPTR ":\t%-20s\t%s%s\n",
+		addr, ud_insn_hex(&ud_obj), ud_insn_asm(&ud_obj), comment ? comment : "");
+
+	if (comment) {
+		free(comment);
+	}
 }
 
-static void _trace_abort_execution()
+static void _abort_execution()
 {
 	printf("[!] Detaching...\n");
 	ptrace_detach(tracee.pid);
@@ -127,7 +153,7 @@ void trace_loop()
 	unsigned int counter = 0;
 	struct user_regs_struct regs;
 
-	signal(SIGINT, _trace_abort_execution);
+	signal(SIGINT, _abort_execution);
 
 	wait(&status);
 
@@ -168,7 +194,7 @@ void trace_loop()
 			++counter;
 
 			if (tracee.num_inst == 0 || counter <= tracee.num_inst) {
-				trace_dump_instr(&regs);
+				_dump_instr(&regs);
 			}
 		}
 	}

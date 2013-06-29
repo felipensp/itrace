@@ -14,6 +14,7 @@
 
 #define STRFY(x)  STRFY2(x)
 #define STRFY2(x) #x
+#define STRL(x)   x, sizeof(x)
 
 #if defined(__x86_64__)
 # define ADDR_FMT "016lx"
@@ -47,6 +48,7 @@ typedef struct {
 	unsigned int num_inst;    /* Max number of instruction to trace          */
 	int show_regs;            /* Indicates if the registers should be dumped */
 	int show_stack;           /* Indicates if the stack must be dumped       */
+	int show_comments;        /* Indicates if the comments is allowed        */
 } trace_info;
 
 pid_t trace_pid();
