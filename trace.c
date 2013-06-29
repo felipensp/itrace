@@ -83,17 +83,21 @@ static char* _instr_comments(ud_t *ud_obj,
 	const struct user_regs_struct *regs)
 {
 	const char *instr = ud_insn_asm(ud_obj);
+	char *comment = NULL;
 
 	if (memcmp(instr, "syscall", sizeof("syscall")-1) == 0
 		|| memcmp(instr, "int $0x80", sizeof("int $0x80")-1) == 0) {
-		char *comment = malloc(sizeof(char) * 50);
+		comment = malloc(sizeof(char) * 50);
+		snprintf(comment, 50, " # %s = %ld", STRFY(reg_eax), regs->reg_eax);
+	} else if (memcmp(instr, "ret", sizeof("ret")-1) == 0) {
+		long retaddr;
 
-		snprintf(comment, 50, " # %s = %ld",
-			STRFY(reg_eax), regs->reg_eax);
+		comment = malloc(sizeof(char) * 50);
+		ptrace_read(tracee.pid, regs->reg_esp, &retaddr);
 
-		return comment;
+		snprintf(comment, 50, " # 0x%" ADDR_FMT, retaddr);
 	}
-	return NULL;
+	return comment;
 }
 
 static void _dump_instr(const struct user_regs_struct *regs)
