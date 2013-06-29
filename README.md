@@ -7,18 +7,16 @@ Tracks runtime assembly instruction execution in programs
 Usage:
 
 ```
-$ itrace -s 0x40056a -n 3 -p 7607
-[+] Attaching to pid 7607
-rax=0x0000000000000000 | rbx=0x0000000000000000 | rcx=0xffffffffffffffff
-rdx=0x0000000000000000 | rsi=0x00007fffd0b75e80 | rdi=0x00007fffd0b75e80
-rsp=0x00007fffd0b75ec0 | rbp=0x00007fffd0b75ee0 | rip=0x000000000040056a
-0x40056a:	488b45e0            	mov -0x20(%rbp), %rax
-rax=0x00007fffd0b75fc8 | rbx=0x0000000000000000 | rcx=0xffffffffffffffff
-rdx=0x0000000000000000 | rsi=0x00007fffd0b75e80 | rdi=0x00007fffd0b75e80
-rsp=0x00007fffd0b75ec0 | rbp=0x00007fffd0b75ee0 | rip=0x000000000040056e
-0x40056e:	4883c008            	add $0x8, %rax
-rax=0x00007fffd0b75fd0 | rbx=0x0000000000000000 | rcx=0xffffffffffffffff
-rdx=0x0000000000000000 | rsi=0x00007fffd0b75e80 | rdi=0x00007fffd0b75e80
-rsp=0x00007fffd0b75ec0 | rbp=0x00007fffd0b75ee0 | rip=0x0000000000400572
-0x400572:	488b10              	mov (%rax), %rdx
+$ ./itrace -o 0x400589 -s -c ../overflow1 CBBBBBBBBAAAAAAAA
+[+] Starting and tracing `../overflow1'
+Arg[0]: ../overflow1
+Arg[1]: CBBBBBBBBAAAAAAAA
+Stack:
+0x00007ffffab95b20 [ 0x00007ffffab95c28 0x0000000200400440 0x00007ffffab95c20 0x4300000000000000 ] 0x00007ffffab95b40
+0x400589:	c9                  	leave
+Stack:
+0x00007ffffab95b48 [ 0x4141414141414141 0x0000000000000000 0x00007ffffab95c28 0x0000000200000000 ] 0x4242424242424242
+0x40058a:	c3                  	ret
+[!] Program exited with status 11
+
 ```
