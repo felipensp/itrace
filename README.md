@@ -8,7 +8,7 @@ Usage:
 
 ```
 $ itrace -s 0x40056a -n 3 -p 7607
-[+] Attaching to pid 7582
+[+] Attaching to pid 7607
 rax=0x0000000000000000 | rbx=0x0000000000000000 | rcx=0xffffffffffffffff
 rdx=0x0000000000000000 | rsi=0x00007fffd0b75e80 | rdi=0x00007fffd0b75e80
 rsp=0x00007fffd0b75ec0 | rbp=0x00007fffd0b75ee0 | rip=0x000000000040056a
