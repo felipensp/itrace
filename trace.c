@@ -51,7 +51,35 @@ pid_t trace_program()
 	return child;
 }
 
-void trace_dump_instr(const struct user_regs_struct *regs)
+static void trace_dump_regs(const struct user_regs_struct *regs)
+{
+	/* Displays register information */
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
+	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
+	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
+	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
+	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
+}
+
+static void trace_dump_stack(const struct user_regs_struct *regs)
+{
+	long addr;
+	int i;
+
+	/* Displays 4 long from the top of stack */
+	printf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
+	for (i = 0; i < 4; ++i) {
+		ptrace_read(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
+		printf("0x%" ADDR_FMT " ", addr);
+	}
+	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
+}
+
+static void trace_dump_instr(const struct user_regs_struct *regs)
 {
 	unsigned char instrs[16] = {0};
 	long value;
@@ -79,42 +107,13 @@ void trace_dump_instr(const struct user_regs_struct *regs)
 		trace_dump_stack(regs);
 	}
 
-	/* Displays three instructions after eip */
 	ud_disassemble(&ud_obj);
 
 	printf("%#" PRIxPTR ":\t%-20s\t%s\n",
 		addr, ud_insn_hex(&ud_obj), ud_insn_asm(&ud_obj));
 }
 
-void trace_dump_regs(const struct user_regs_struct *regs)
-{
-	/* Displays register information */
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
-}
-
-void trace_dump_stack(const struct user_regs_struct *regs)
-{
-	long addr;
-	int i;
-
-	/* Displays 4 long from the top of stack */
-	printf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
-	for (i = 0; i < 4; ++i) {
-		ptrace_read(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
-		printf("0x%" ADDR_FMT " ", addr);
-	}
-	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
-}
-
-void _trace_abort_execution()
+static void _trace_abort_execution()
 {
 	printf("[!] Detaching...\n");
 	ptrace_detach(tracee.pid);
@@ -146,7 +145,7 @@ void trace_loop()
 
 		if (signo == SIGTRAP) {
 			signo = 0;
-		} else if (signo == SIGHUP || signo == SIGINT || signo == SIGSEGV) {
+		} else {
 			ptrace(PTRACE_CONT, tracee.pid, 0, signo);
 			break;
 		}

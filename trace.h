@@ -52,9 +52,6 @@ typedef struct {
 pid_t trace_pid();
 pid_t trace_program();
 void trace_loop();
-void trace_dump_instr(const struct user_regs_struct*);
-void trace_dump_regs(const struct user_regs_struct*);
-void trace_dump_stack(const struct user_regs_struct*);
 
 extern trace_info tracee;
 
