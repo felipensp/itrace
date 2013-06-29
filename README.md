@@ -3,6 +3,8 @@ itrace
 
 Tracks runtime instruction execution in programs
 
+Requirements: libudis86
+
 
 Usage:
 ```
