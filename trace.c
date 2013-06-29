@@ -167,10 +167,8 @@ void trace_loop()
 		if (active) {
 			++counter;
 
-			trace_dump_instr(&regs);
-
-			if (counter == tracee.num_inst) {
-				break;
+			if (tracee.num_inst == 0 || counter <= tracee.num_inst) {
+				trace_dump_instr(&regs);
 			}
 		}
 	}
