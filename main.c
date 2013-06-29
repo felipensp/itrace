@@ -15,13 +15,14 @@ trace_info tracee;
 static void usage()
 {
 	puts("itrace [options]\n"
-		 "-c, --command   Program to be started and traced\n"
-		 "-h, --help      Show this help\n"
-		 "-n, --max-inst  Max number of instruction to trace\n"
-		 "-p, --pid       Attach to pid\n"
-		 "-r, --show-regs Dump registers on each instruction\n"
-		 "-s, --start     Address to start tracing\n"
-		 "-v, --version   Show the version\n");
+		 "-c, --command     Program to be started and traced\n"
+		 "-h, --help        Show this help\n"
+		 "-n, --max-inst    Max number of instruction to trace\n"
+		 "-o, --offset      Address to start tracing\n"
+		 "-p, --pid         Attach to supplied pid\n"
+		 "-r, --show-regs   Dump registers on each instruction\n"
+		 "-s, --show-stack  Dump part of stack from top on each instruction\n"
+		 "-v, --version     Show the version\n");
 }
 
 static void version()
