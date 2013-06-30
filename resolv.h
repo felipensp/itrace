@@ -17,10 +17,10 @@ int resolv_is_dynamic(uintptr_t);
 void resolv_show_maps();
 
 typedef struct {
-	uintptr_t saddr;      /* start address */
-	uintptr_t eaddr;      /* end address   */
-	char fname[PATH_MAX]; /* file name     */
-	char perms[5];        /* permissions   */
+	uintptr_t saddr;      /* Start address */
+	uintptr_t eaddr;      /* End address   */
+	char fname[PATH_MAX]; /* File name     */
+	char perms[5];        /* Permissions   */
 	int is_dynamic;
 } resolv_segment;
 
