@@ -18,7 +18,7 @@ resolv_info r_info;
 static int _maps_region(const char *line)
 {
 	uintptr_t start, end;
-	char perms[5], fname[PATH_MAX];
+	char perms[5], fname[PATH_MAX] = {0};
 	int offset, dmajor, dminor, inode;
 	const size_t n = r_info.num_segments;
 	resolv_segment *segments = r_info.segments;
@@ -40,9 +40,13 @@ static int _maps_region(const char *line)
 
 	segments[n].saddr = start;
 	segments[n].eaddr = end;
-	segments[n].is_dynamic = strstr(fname, ".so") != NULL
+
+	if (fname[0] != '\0'
+		&& (strstr(fname, ".so") != NULL
 		|| strstr(fname, "[vdso]") != NULL
-		|| strstr(fname, "[vsyscall]") != NULL;
+		|| strstr(fname, "[vsyscall]") != NULL)) {
+		segments[n].is_dynamic = 1;
+	}
 
 	memcpy(segments[n].fname, fname, sizeof(fname));
 	memcpy(segments[n].perms, perms, sizeof(perms));
@@ -74,7 +78,7 @@ static int _map_segments()
 	while (getline(&line, &size, fp) != -1) {
 		_maps_region(line);
 	}
-
+	free(line);
 	fclose(fp);
 
 	return 1;
