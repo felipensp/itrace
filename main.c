@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 			case 'c':
 				tracee.prog = optarg;
 				tracee.prog_args = (char* const*)&argv[optind-1];
-				break;
+				goto out;
 
 			case 'C':
 				tracee.flags |= SHOW_COMMENTS;
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 				exit(0);
 		}
 	}
-
+out:
 	if (tracee.pid) {
 		tracee.pid = trace_pid();
 	} else {

@@ -107,7 +107,6 @@ void resolv_startup()
 		printf("[!] Failed to read /proc/%d/maps file!", tracee.pid);
 		return;
 	}
-	exit(0);
 }
 
 void resolv_shutdown()

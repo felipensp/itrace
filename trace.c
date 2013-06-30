@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
 #include <libudis86/extern.h>
 #include <libudis86/types.h>
 #include "trace.h"
@@ -45,8 +46,10 @@ pid_t trace_program()
 			puts("[!] ptrace_traceme failed!");
 			exit(1);
 		}
-		execv(tracee.prog, tracee.prog_args);
-		exit(0);
+		if (execv(tracee.prog, tracee.prog_args) == -1) {
+			printf("[!] execv() failed (%s)\n", strerror(errno));
+		}
+		exit(1);
 	}
 
 	return child;
