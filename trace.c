@@ -74,7 +74,7 @@ static void _dump_stack(const struct user_regs_struct *regs)
 	/* Displays 4 long from the top of stack */
 	printf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
 	for (i = 0; i < 4; ++i) {
-		ptrace_read(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
+		ptrace_read_long(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
 		printf("0x%" ADDR_FMT " ", addr);
 	}
 	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
@@ -88,13 +88,15 @@ static char* _instr_comments(ud_t *ud_obj,
 
 	if (memcmp(instr, "syscall", sizeof("syscall")-1) == 0
 		|| memcmp(instr, "int $0x80", sizeof("int $0x80")-1) == 0) {
+		/* system call */
 		comment = malloc(sizeof(char) * 50);
 		snprintf(comment, 50, " # %s = %ld", STRFY(reg_eax), regs->reg_eax);
 	} else if (memcmp(instr, "ret", sizeof("ret")-1) == 0) {
+		/* return */
 		long retaddr;
 
 		comment = malloc(sizeof(char) * 50);
-		ptrace_read(tracee.pid, regs->reg_esp, &retaddr);
+		ptrace_read_long(tracee.pid, regs->reg_esp, &retaddr);
 
 		snprintf(comment, 50, " # 0x%" ADDR_FMT, retaddr);
 	}
@@ -118,7 +120,7 @@ static void _dump_instr(const struct user_regs_struct *regs)
 	ud_set_input_buffer(&ud_obj, instrs, sizeof(instrs)-1);
 
 	for (i = 0; i < sizeof(instrs) / sizeof(long); i += sizeof(long)) {
-		ptrace_read(tracee.pid, regs->reg_eip + (sizeof(long) * i), &value);
+		ptrace_read_long(tracee.pid, regs->reg_eip + (sizeof(long) * i), &value);
 		memcpy(instrs + (sizeof(long) * i), &value, sizeof(long));
 	}
 

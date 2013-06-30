@@ -10,12 +10,14 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "resolv.h"
 #include "trace.h"
+#include "ptrace.h"
 
 resolv_info r_info;
 
-static int _maps_region(const char *line)
+static int _map_region(const char *line)
 {
 	uintptr_t start, end;
 	char perms[5], fname[PATH_MAX] = {0};
@@ -76,7 +78,7 @@ static int _map_segments()
 	}
 
 	while (getline(&line, &size, fp) != -1) {
-		_maps_region(line);
+		_map_region(line);
 	}
 	free(line);
 	fclose(fp);
@@ -101,7 +103,11 @@ void resolv_show_maps()
 
 void resolv_startup()
 {
-	_map_segments();
+	if (!_map_segments()) {
+		printf("[!] Failed to read /proc/%d/maps file!", tracee.pid);
+		return;
+	}
+	exit(0);
 }
 
 void resolv_shutdown()
@@ -134,3 +140,4 @@ find:
 
 	return 0;
 }
+

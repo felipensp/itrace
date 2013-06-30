@@ -25,8 +25,8 @@ typedef struct {
 } resolv_segment;
 
 typedef struct {
-	resolv_segment *segments;
-	unsigned int num_segments;
+	resolv_segment *segments;   /* Segments mapped to the process */
+	unsigned int num_segments;  /* Number of segments             */
 } resolv_info;
 
 extern resolv_info r_info;

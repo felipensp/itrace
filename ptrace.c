@@ -23,10 +23,27 @@ long ptrace_traceme()
 	return ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 }
 
-void ptrace_read(pid_t pid, uintptr_t addr, void *vptr)
+void ptrace_read_long(pid_t pid, uintptr_t addr, void *vptr)
 {
-	long word = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
-	memcpy(vptr, &word, sizeof(long));
+	ptrace_read(pid, addr, vptr, sizeof(long));
+}
+
+void ptrace_read(pid_t pid, uintptr_t addr, void *vptr, long len)
+{
+	const size_t long_size = sizeof(long);
+	int i = 0, j = len / long_size, is_exact = len % long_size;
+	long word;
+	void *saddr = vptr;
+
+	while (i <= j) {
+		if (i == j && is_exact == 0) {
+			break;
+		}
+		word = ptrace(PTRACE_PEEKTEXT, pid, addr + i * long_size, NULL);
+		memcpy(saddr, &word, i == j ? (len % long_size) : long_size);
+		saddr += long_size;
+		++i;
+	}
 }
 
 void ptrace_write(pid_t pid, uintptr_t addr, long value)
