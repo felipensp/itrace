@@ -20,6 +20,7 @@ static void usage()
 		 "-C, --comments    Show comments after disassembled instruction\n"
 		 "-h, --help        Show this help\n"
 		 "-i, --ignore-libs Disable tracing of libraries segments\n"
+		 "-m, --maps        Show the maps file after execution\n"
 		 "-n, --max-inst    Max number of instruction to trace\n"
 		 "-o, --offset      Address to start tracing\n"
 		 "-p, --pid         Attach to supplied pid\n"
