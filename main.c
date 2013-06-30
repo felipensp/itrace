@@ -19,6 +19,7 @@ static void usage()
 		 "-c, --command     Program to be started and traced\n"
 		 "-C, --comments    Show comments after disassembled instruction\n"
 		 "-h, --help        Show this help\n"
+		 "-i, --ignore-libs Disable tracing of libraries segments\n"
 		 "-n, --max-inst    Max number of instruction to trace\n"
 		 "-o, --offset      Address to start tracing\n"
 		 "-p, --pid         Attach to supplied pid\n"
@@ -35,13 +36,14 @@ static void version()
 
 int main(int argc, char **argv)
 {
-	pid_t pid = 0;
 	char c;
 	int opt_index = 0;
 	static struct option long_opts[] = {
 		{"command",    required_argument, 0, 'c'},
 		{"comments",   no_argument,       0, 'C'},
 		{"help",       no_argument,       0, 'h'},
+		{"ignore-libs",no_argument,       0, 'i'},
+		{"show-maps",  no_argument,       0, 'm'},
 		{"max-inst",   required_argument, 0, 'n'},
 		{"offset",     required_argument, 0, 'o'},
 		{"pid",        required_argument, 0, 'p'},
@@ -57,7 +59,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	while ((c = getopt_long(argc, argv, "c:Chn:o:p:rsS:v", long_opts, &opt_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:Chimn:o:p:rsS:v", long_opts, &opt_index)) != -1) {
 		switch (c) {
 			case 'c':
 				tracee.prog = optarg;
@@ -71,6 +73,14 @@ int main(int argc, char **argv)
 			case 'h':
 				usage();
 				exit(0);
+
+			case 'i':
+				tracee.flags |= IGNORE_LIBS;
+				break;
+
+			case 'm':
+				tracee.flags |= SHOW_MAPS;
+				break;
 
 			case 'n':
 				tracee.num_inst = atol(optarg);
@@ -104,13 +114,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (pid) {
+	if (tracee.pid) {
 		tracee.pid = trace_pid();
 	} else {
 		tracee.pid = trace_program();
 	}
 
-	trace_loop();
+	if (tracee.pid) {
+		trace_loop();
+	}
 
 	return 0;
 }

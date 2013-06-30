@@ -13,17 +13,18 @@
 #include <libudis86/types.h>
 #include "trace.h"
 #include "ptrace.h"
+#include "resolv.h"
 
-pid_t trace_pid(pid_t pid)
+pid_t trace_pid()
 {
-	printf("[+] Attaching to pid %d\n", pid);
+	printf("[+] Attaching to pid %d\n", tracee.pid);
 
-	if (ptrace_attach(pid) < 0) {
+	if (ptrace_attach(tracee.pid) < 0) {
 		puts("[!] ptrace_attach failed!");
-		exit(1);
+		return 0;
 	}
 
-	return pid;
+	return tracee.pid;
 }
 
 pid_t trace_program()
@@ -158,7 +159,7 @@ void trace_loop()
 	struct user_regs_struct regs;
 
 	signal(SIGINT, _abort_execution);
-
+	resolv_startup();
 	wait(&status);
 
 	while (1) {
@@ -197,6 +198,11 @@ void trace_loop()
 		if (active) {
 			++counter;
 
+			if ((tracee.flags & IGNORE_LIBS)
+				&& resolv_is_dynamic(regs.reg_eip)) {
+				continue;
+			}
+
 			if (tracee.num_inst == 0 || counter <= tracee.num_inst) {
 				_dump_instr(&regs);
 			}
@@ -204,4 +210,10 @@ void trace_loop()
 	}
 out:
 	printf("[!] Program exited with status %d\n", WEXITSTATUS(status));
+
+	if (tracee.flags & SHOW_MAPS) {
+		resolv_show_maps();
+	}
+
+	resolv_shutdown();
 }

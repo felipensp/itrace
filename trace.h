@@ -44,12 +44,14 @@
 #endif
 
 /*
- * Flags to handle option related to what to show on the trace
+ * Possible flags passed to itrace
  */
 typedef enum {
-	SHOW_REGISTERS = 1<<0,
-	SHOW_STACK     = 1<<1,
-	SHOW_COMMENTS  = 1<<2
+	SHOW_REGISTERS = 1<<0, /* -r */
+	SHOW_STACK     = 1<<1, /* -s */
+	SHOW_COMMENTS  = 1<<2, /* -C */
+	SHOW_MAPS      = 1<<3, /* -m */
+	IGNORE_LIBS    = 1<<4  /* -i */
 } trace_show_opts;
 
 /*
@@ -62,7 +64,7 @@ typedef struct {
 	uintptr_t offset;         /* eip offset to start tracing                 */
 	unsigned int num_inst;    /* Max number of instruction to trace          */
 	int syntax;               /* Assembly syntax (0 = at&t, 1 = intel)       */
-	int flags;                /* Flags to handle options to show information */
+	int flags;                /* Flags to handle options                     */
 } trace_info;
 
 pid_t trace_pid();

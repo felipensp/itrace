@@ -14,12 +14,14 @@
 void resolv_startup();
 void resolv_shutdown();
 int resolv_is_dynamic(uintptr_t);
+void resolv_show_maps();
 
 typedef struct {
 	uintptr_t saddr;      /* start address */
 	uintptr_t eaddr;      /* end address   */
 	char fname[PATH_MAX]; /* file name     */
 	char perms[5];        /* permissions   */
+	int is_dynamic;
 } resolv_segment;
 
 typedef struct {
