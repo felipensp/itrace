@@ -42,9 +42,9 @@ static int _maps_region(const char *line)
 	segments[n].eaddr = end;
 
 	if (fname[0] != '\0'
-		&& (strstr(fname, ".so") != NULL
-		|| strstr(fname, "[vdso]") != NULL
-		|| strstr(fname, "[vsyscall]") != NULL)) {
+		&& (strstr(fname, "[vdso]") != NULL
+		|| strstr(fname, "[vsyscall]") != NULL
+		|| strstr(fname, ".so") != NULL)) {
 		segments[n].is_dynamic = 1;
 	}
 

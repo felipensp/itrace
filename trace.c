@@ -113,7 +113,7 @@ static void _dump_instr(const struct user_regs_struct *regs)
 	ud_init(&ud_obj);
 	ud_set_mode(&ud_obj, 64);
 	ud_set_vendor(&ud_obj, UD_VENDOR_AMD);
-	ud_set_pc(&ud_obj, 0);
+	ud_set_pc(&ud_obj, regs->reg_eip);
 	ud_set_syntax(&ud_obj, tracee.syntax ? UD_SYN_INTEL : UD_SYN_ATT);
 	ud_set_input_buffer(&ud_obj, instrs, sizeof(instrs)-1);
 
