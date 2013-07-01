@@ -18,7 +18,7 @@
 
 resolv_info r_info;
 
-static int _map_region(const char *line)
+static int _map_region(const char *prog, const char *line)
 {
 	uintptr_t start, end;
 	char perms[5], fname[PATH_MAX] = {0};
@@ -42,13 +42,13 @@ static int _map_region(const char *line)
 
 	segments[n].saddr = start;
 	segments[n].eaddr = end;
-	segments[n].is_dynamic = 0;
+	segments[n].is_dynamic = 1;
 
-	if (fname[0] != '\0'
-		&& (strstr(fname, "[vdso]") != NULL
-		|| strstr(fname, "[vsyscall]") != NULL
-		|| strstr(fname, ".so") != NULL)) {
-		segments[n].is_dynamic = 1;
+	if (memcmp(fname, prog, strlen(prog)+1) == 0) {
+		if (r_info.baddr == 0) {
+			r_info.baddr = start;
+		}
+		segments[n].is_dynamic = 0;
 	}
 
 	memcpy(segments[n].fname, fname, sizeof(fname));
@@ -62,7 +62,7 @@ static int _map_region(const char *line)
 
 static int _map_segments()
 {
-	char fname[PATH_MAX], *line = NULL;
+	char fname[PATH_MAX], lname[PATH_MAX], *line = NULL;
 	FILE *fp;
 	size_t size;
 
@@ -72,6 +72,17 @@ static int _map_segments()
 		r_info.num_segments = 0;
 	}
 
+	if (tracee.prog) {
+		if (realpath(tracee.prog, lname) == NULL) {
+			return 0;
+		}
+	} else {
+		snprintf(fname, sizeof(fname), "/proc/%d/exe", tracee.pid);
+		if (readlink(fname, lname, sizeof(lname)) != -1) {
+			return 0;
+		}
+	}
+
 	snprintf(fname, sizeof(fname), "/proc/%d/maps", tracee.pid);
 
 	if ((fp = fopen(fname, "r")) == NULL) {
@@ -79,8 +90,9 @@ static int _map_segments()
 	}
 
 	while (getline(&line, &size, fp) != -1) {
-		_map_region(line);
+		_map_region(lname, line);
 	}
+
 	free(line);
 	fclose(fp);
 
@@ -109,7 +121,7 @@ void resolv_startup()
 		return;
 	}
 
-	elfsym_startup(r_info.segments[0].saddr);
+	elfsym_startup(r_info.baddr);
 }
 
 void resolv_shutdown()

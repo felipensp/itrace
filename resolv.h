@@ -26,6 +26,7 @@ typedef struct {
 } resolv_segment;
 
 typedef struct {
+	uintptr_t baddr;            /* Base address of executable     */
 	resolv_segment *segments;   /* Segments mapped to the process */
 	unsigned int num_segments;  /* Number of segments             */
 } resolv_info;
