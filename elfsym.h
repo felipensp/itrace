@@ -1,5 +1,8 @@
 /*
  * itrace
+ *
+ * ELF symbols specific routines header
+ *
  */
 
 #ifndef ITRACE_ELFSYM_H
@@ -20,12 +23,13 @@ typedef struct {
 } elfsym_sym;
 
 typedef struct {
-	ElfW(Ehdr) ehdr;
-	uintptr_t baddr;
-	uintptr_t symtab;
-	uintptr_t strtab;
-	unsigned int nsyms;
-	elfsym_sym *syms;
+	ElfW(Ehdr) ehdr;     /* ELF header                        */
+	int pie;             /* Indicates if the program is a PIE */
+	uintptr_t baddr;     /* Executable base addres            */
+	uintptr_t symtab;    /* Dynamic symbol table              */
+	uintptr_t strtab;    /* Dynamic string table              */
+	unsigned int nsyms;  /* Number of symbols                 */
+	elfsym_sym *syms;    /* Symbols                           */
 } elfsym_info;
 
 void elfsym_startup(uintptr_t);

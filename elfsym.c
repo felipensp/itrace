@@ -1,3 +1,9 @@
+/*
+ * itrace
+ *
+ * ELF symbols specific routines
+ */
+
 #include <stdio.h>
 #include <elf.h>
 #include <link.h>
@@ -8,6 +14,11 @@
 #include "ptrace.h"
 
 elfsym_info e_info;
+
+inline static uintptr_t adjust_addr(uintptr_t addr)
+{
+	return e_info.pie ? e_info.baddr + addr : addr;
+}
 
 static void _add_symbol(const char *name, uintptr_t addr)
 {
@@ -44,7 +55,7 @@ static void _find_plt_symbols(uintptr_t rel_addr, uintptr_t rel_size)
 		ptrace_read(tracee.pid, e_info.strtab + sym.st_name, name, sizeof(name));
 		name[MAX_SYM_NAME] = 0;
 
-		_add_symbol(name, rela.r_offset);
+		_add_symbol(name, adjust_addr(rela.r_offset));
 
 		rel_addr += sizeof(rela);
 	}
@@ -62,7 +73,7 @@ static void _find_dynamic()
 		ptrace_read(tracee.pid, addr, &phdr, sizeof(phdr));
 
 		if (phdr.p_type == PT_DYNAMIC) {
-			addr = phdr.p_vaddr;
+			addr = adjust_addr(phdr.p_vaddr);
 			break;
 		}
 
@@ -78,13 +89,13 @@ static void _find_dynamic()
 
 		switch (dyn.d_tag) {
 			case DT_SYMTAB:
-				e_info.symtab = dyn.d_un.d_ptr;
+				e_info.symtab = adjust_addr(dyn.d_un.d_ptr);
 				break;
 			case DT_STRTAB:
-				e_info.strtab = dyn.d_un.d_ptr;
+				e_info.strtab = adjust_addr(dyn.d_un.d_ptr);
 				break;
 			case DT_JMPREL:
-				rel_addr = dyn.d_un.d_ptr;
+				rel_addr = adjust_addr(dyn.d_un.d_ptr);
 				break;
 			case DT_PLTRELSZ:
 				rel_size = dyn.d_un.d_val;
@@ -104,6 +115,8 @@ void elfsym_startup(uintptr_t baddr)
 	e_info.baddr = baddr;
 
 	ptrace_read(tracee.pid, baddr, &e_info.ehdr, sizeof(ElfW(Ehdr)));
+
+	e_info.pie = e_info.ehdr.e_type == ET_DYN;
 
 	_find_dynamic();
 }
