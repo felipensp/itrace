@@ -2,6 +2,7 @@
  * itrace
  *
  * ELF symbols specific routines
+ *
  */
 
 #include <stdio.h>
