@@ -39,71 +39,170 @@ static void _add_symbol(const char *name, uintptr_t addr)
 	e_info.nsyms++;
 }
 
-static void _find_plt_symbols(uintptr_t rel_addr, uintptr_t rel_size)
+static void _read_elf_header(uintptr_t baddr)
 {
-	ElfW(Rela) rela;
-	ElfW(Sym) sym;
-	int i;
+	Elf32_Ehdr ehdr;
 
-	for (i = 0; i < rel_size / sizeof(rela); ++i) {
-		char name[MAX_SYM_NAME+1];
+	ptrace_read(tracee.pid, baddr, &ehdr, sizeof(ehdr));
+
+	if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG) != 0) {
+		printf("[!] Invalid ELF on base address\n");
+		return;
+	}
+
+	e_info.class = (ehdr.e_ident[EI_CLASS] == 1 ? 32 : 64);
+	e_info.baddr = baddr;
+
+	if (e_info.class == 32) {
+		e_info.phaddr = e_info.baddr + ehdr.e_phoff;
+		e_info.phnum  = ehdr.e_phnum;
+		e_info.pie    = (ehdr.e_type == ET_DYN);
+	} else {
+		Elf64_Ehdr ehdr;
+
+		ptrace_read(tracee.pid, baddr, &ehdr, sizeof(ehdr));
+
+		e_info.phaddr = e_info.baddr + ehdr.e_phoff;
+		e_info.phnum  = ehdr.e_phnum;
+		e_info.pie    = (ehdr.e_type == ET_DYN);
+	}
+}
+
+static int _read_elf_rela_symbol(uintptr_t rel_addr, uintptr_t *offset)
+{
+	if (e_info.class == 32) {
+		Elf32_Rela rela;
+		Elf32_Sym sym;
 
 		ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
-
 		ptrace_read(tracee.pid, e_info.symtab +
-			(sizeof(sym)* ELF_R(SYM, rela.r_info)), &sym, sizeof(sym));
+			(sizeof(sym) * ELF32_R_SYM(rela.r_info)), &sym, sizeof(sym));
 
-		ptrace_read(tracee.pid, e_info.strtab + sym.st_name, name, sizeof(name));
+		*offset = adjust_addr(rela.r_offset);
+		return sym.st_name;
+	} else {
+		Elf64_Rela rela;
+		Elf64_Sym sym;
+
+		ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
+		ptrace_read(tracee.pid, e_info.symtab +
+			(sizeof(sym) * ELF64_R_SYM(rela.r_info)), &sym, sizeof(sym));
+
+		*offset = adjust_addr(rela.r_offset);
+		return sym.st_name;
+	}
+}
+
+static int _read_elf_phdr_entry(uintptr_t addr, uintptr_t *vaddr, long *memsz)
+{
+	if (e_info.class == 32) {
+		Elf32_Phdr phdr;
+
+		ptrace_read(tracee.pid, addr, &phdr, sizeof(phdr));
+		*vaddr = adjust_addr(phdr.p_vaddr);
+		*memsz = phdr.p_memsz;
+
+		return phdr.p_type;
+	} else {
+		Elf64_Phdr phdr;
+
+		ptrace_read(tracee.pid, addr, &phdr, sizeof(phdr));
+		*vaddr = adjust_addr(phdr.p_vaddr);
+		*memsz = phdr.p_memsz;
+
+		return phdr.p_type;
+	}
+}
+
+static int _read_elf_dyn_entry(uintptr_t addr, uintptr_t *d_ptr, long *d_val)
+{
+	if (e_info.class == 32) {
+		Elf32_Dyn dyn;
+
+		ptrace_read(tracee.pid, addr, &dyn, sizeof(dyn));
+
+		*d_ptr = adjust_addr(dyn.d_un.d_ptr);
+		*d_val = dyn.d_un.d_val;
+
+		return dyn.d_tag;
+	} else {
+		Elf64_Dyn dyn;
+
+		ptrace_read(tracee.pid, addr, &dyn, sizeof(dyn));
+
+		*d_ptr = adjust_addr(dyn.d_un.d_ptr);
+		*d_val = dyn.d_un.d_val;
+
+		return dyn.d_tag;
+	}
+}
+
+static void _find_plt_symbols(uintptr_t rel_addr, uintptr_t memsz)
+{
+	int i;
+	size_t rela_size = e_info.class == 32 ? sizeof(Elf32_Rela) : sizeof(Elf64_Rela);
+
+	for (i = 0; i < memsz / rela_size; ++i) {
+		char name[MAX_SYM_NAME+1];
+		uintptr_t addr;
+		uintptr_t symname = _read_elf_rela_symbol(rel_addr, &addr);
+
+		ptrace_read(tracee.pid, e_info.strtab + symname, name, sizeof(name));
 		name[MAX_SYM_NAME] = 0;
 
-		_add_symbol(name, adjust_addr(rela.r_offset));
+		_add_symbol(name, addr);
 
-		rel_addr += sizeof(rela);
+		rel_addr += rela_size;
 	}
 }
 
 static void _find_dynamic()
 {
-	ElfW(Phdr) phdr;
-	ElfW(Dyn) dyn;
-	uintptr_t addr = e_info.baddr + e_info.ehdr.e_phoff;
+	uintptr_t addr = e_info.phaddr;
 	uintptr_t rel_addr, rel_size;
-	int i;
+	long memsz;
+	int ptype, i;
+	size_t phdr_size = e_info.class == 32 ? sizeof(Elf32_Phdr) : sizeof(Elf64_Phdr);
+	size_t dyn_size = e_info.class == 32 ? sizeof(Elf32_Dyn) : sizeof(Elf64_Dyn);
 
-	for (i = 0; i < e_info.ehdr.e_phnum; ++i) {
-		ptrace_read(tracee.pid, addr, &phdr, sizeof(phdr));
+	for (i = 0; i < e_info.phnum; ++i) {
+		uintptr_t vaddr;
 
-		if (phdr.p_type == PT_DYNAMIC) {
-			addr = adjust_addr(phdr.p_vaddr);
+		ptype = _read_elf_phdr_entry(addr, &vaddr, &memsz);
+
+		if (ptype == PT_DYNAMIC) {
+			addr = vaddr;
 			break;
 		}
 
-		addr += sizeof(phdr);
+		addr += phdr_size;
 	}
 
-	if (phdr.p_type != PT_DYNAMIC) {
+	if (ptype != PT_DYNAMIC) {
 		return;
 	}
 
-	for (i = 0; i < phdr.p_memsz / sizeof(dyn); ++i) {
-		ptrace_read(tracee.pid, addr, &dyn, sizeof(dyn));
+	for (i = 0; i < memsz / dyn_size; ++i) {
+		uintptr_t d_ptr;
+		long d_val;
+		int d_tag = _read_elf_dyn_entry(addr, &d_ptr, &d_val);
 
-		switch (dyn.d_tag) {
+		switch (d_tag) {
 			case DT_SYMTAB:
-				e_info.symtab = adjust_addr(dyn.d_un.d_ptr);
+				e_info.symtab = d_ptr;
 				break;
 			case DT_STRTAB:
-				e_info.strtab = adjust_addr(dyn.d_un.d_ptr);
+				e_info.strtab = d_ptr;
 				break;
 			case DT_JMPREL:
-				rel_addr = adjust_addr(dyn.d_un.d_ptr);
+				rel_addr = d_ptr;
 				break;
 			case DT_PLTRELSZ:
-				rel_size = dyn.d_un.d_val;
+				rel_size = d_val;
 				break;
 		}
 
-		addr += sizeof(dyn);
+		addr += dyn_size;
 	}
 
 	if (e_info.symtab != 0 && e_info.strtab != 0) {
@@ -111,15 +210,12 @@ static void _find_dynamic()
 	}
 }
 
-void elfsym_startup(uintptr_t baddr)
+int elfsym_startup(uintptr_t baddr)
 {
-	e_info.baddr = baddr;
-
-	ptrace_read(tracee.pid, baddr, &e_info.ehdr, sizeof(ElfW(Ehdr)));
-
-	e_info.pie = e_info.ehdr.e_type == ET_DYN;
-
+	_read_elf_header(baddr);
 	_find_dynamic();
+
+	return 1;
 }
 
 void elfsym_shutdown()
