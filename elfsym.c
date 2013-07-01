@@ -17,7 +17,7 @@ static void _add_symbol(const char *name, uintptr_t addr)
 
 		if (e_info.syms == NULL) {
 			printf("[!] Failed to realloc symbol!");
-			exit(1);
+			return;
 		}
 	}
 
