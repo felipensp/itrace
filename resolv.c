@@ -32,8 +32,7 @@ static int _map_region(const char *line)
 	}
 
 	if (segments == NULL || n % 5 == 0) {
-		segments = (resolv_segment*) realloc(segments,
-			sizeof(resolv_segment) * (n + 5));
+		segments = realloc(segments, sizeof(resolv_segment) * (n + 5));
 
 		if (segments == NULL) {
 			return 0;
@@ -42,6 +41,7 @@ static int _map_region(const char *line)
 
 	segments[n].saddr = start;
 	segments[n].eaddr = end;
+	segments[n].is_dynamic = 0;
 
 	if (fname[0] != '\0'
 		&& (strstr(fname, "[vdso]") != NULL
@@ -117,9 +117,11 @@ void resolv_shutdown()
 int resolv_is_dynamic(uintptr_t addr)
 {
 	int i = 0, try = 0;
-	resolv_segment *segs = r_info.segments;
+	resolv_segment *segs;
 
 find:
+	segs = r_info.segments;
+
 	while (i < r_info.num_segments) {
 		if (segs[i].saddr <= addr && segs[i].eaddr >= addr) {
 			return segs[i].is_dynamic;
@@ -139,4 +141,3 @@ find:
 
 	return 0;
 }
-
