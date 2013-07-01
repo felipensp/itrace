@@ -1,6 +1,6 @@
 CC?=gcc
 CFLAGS=-Wall -g
-OBJECTS=main.o ptrace.o trace.o resolv.o
+OBJECTS=main.o ptrace.o trace.o resolv.o elfsym.o
 
 itrace: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ -ludis86

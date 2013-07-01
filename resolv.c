@@ -14,6 +14,7 @@
 #include "resolv.h"
 #include "trace.h"
 #include "ptrace.h"
+#include "elfsym.h"
 
 resolv_info r_info;
 
@@ -107,11 +108,15 @@ void resolv_startup()
 		printf("[!] Failed to read /proc/%d/maps file!", tracee.pid);
 		return;
 	}
+
+	elfsym_startup(r_info.segments[0].saddr);
 }
 
 void resolv_shutdown()
 {
 	free(r_info.segments);
+
+	elfsym_shutdown();
 }
 
 int resolv_is_dynamic(uintptr_t addr)
@@ -140,4 +145,11 @@ find:
 	}
 
 	return 0;
+}
+
+const char *resolv_symbol(uintptr_t addr)
+{
+	const elfsym_sym *sym = elfsym_resolv(addr);
+
+	return sym ? sym->name : NULL;
 }

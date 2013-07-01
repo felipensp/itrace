@@ -102,6 +102,19 @@ static char* _instr_comments(ud_t *ud_obj,
 		ptrace_read_long(tracee.pid, regs->reg_esp, &retaddr);
 
 		snprintf(comment, 50, " # 0x%" ADDR_FMT, retaddr);
+	} else if (memcmp(instr, "jmp", sizeof("jmp")-1) == 0) {
+		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
+		const int insn_len = ud_insn_len(ud_obj);
+
+		if (op->type == UD_OP_MEM && op->base == UD_R_RIP) { /* PLT stub */
+			const char *sym = resolv_symbol(regs->reg_eip +
+				op->lval.sdword + insn_len);
+
+			if (sym) {
+				comment = malloc(sizeof(char) * 80);
+				snprintf(comment, 80, " # %s", sym);
+			}
+		}
 	}
 	return comment;
 }

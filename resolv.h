@@ -15,6 +15,7 @@ void resolv_startup();
 void resolv_shutdown();
 int resolv_is_dynamic(uintptr_t);
 void resolv_show_maps();
+const char* resolv_symbol(uintptr_t);
 
 typedef struct {
 	uintptr_t saddr;      /* Start address */
