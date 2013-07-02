@@ -15,6 +15,7 @@
 #include "trace.h"
 #include "ptrace.h"
 #include "resolv.h"
+#include "elfsym.h"
 
 pid_t trace_pid()
 {
@@ -105,15 +106,18 @@ static char* _instr_comments(ud_t *ud_obj,
 	} else if (memcmp(instr, "jmp", sizeof("jmp")-1) == 0) {
 		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
 		const int insn_len = ud_insn_len(ud_obj);
+		const char *sym = NULL;
 
-		if (op->type == UD_OP_MEM && op->base == UD_R_RIP) { /* PLT stub */
-			const char *sym = resolv_symbol(regs->reg_eip +
-				op->lval.sdword + insn_len);
+		/* PLT stub */
+		if (e_info.class == 64 && op->type == UD_OP_MEM && op->base == UD_R_RIP) {
+			sym = resolv_symbol(regs->reg_eip +	op->lval.sdword + insn_len);
+		} else if (e_info.class == 32 && op->type == UD_OP_MEM) {
+			sym = resolv_symbol(op->lval.sdword);
+		}
 
-			if (sym) {
-				comment = malloc(sizeof(char) * 80);
-				snprintf(comment, 80, " # %s", sym);
-			}
+		if (sym) {
+			comment = malloc(sizeof(char) * 80);
+			snprintf(comment, 80, " # %s", sym);
 		}
 	}
 	return comment;
@@ -129,7 +133,7 @@ static void _dump_instr(const struct user_regs_struct *regs)
 	uintptr_t addr = regs->reg_eip;
 
 	ud_init(&ud_obj);
-	ud_set_mode(&ud_obj, 64);
+	ud_set_mode(&ud_obj, e_info.class);
 	ud_set_vendor(&ud_obj, UD_VENDOR_AMD);
 	ud_set_pc(&ud_obj, regs->reg_eip);
 	ud_set_syntax(&ud_obj, tracee.syntax ? UD_SYN_INTEL : UD_SYN_ATT);
