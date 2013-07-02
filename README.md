@@ -3,12 +3,13 @@ itrace
 
 Tracks runtime instruction execution in programs
 
-Requirements: libudis86
+* Supported: ELF 32 and 64 bit (little-endian).
+* Requirements: libudis86 (https://github.com/vmt/udis86)
 
 Author: Felipe Pena (felipensp at gmail dot com)
 
 
-Usage:
+###### Usage:
 ```
 itrace [options]
 -c, --command     Program to be started and traced
@@ -25,7 +26,7 @@ itrace [options]
 -v, --version     Show the version
 ```
 
-Example:
+###### Example:
 
 ```
 $ ./itrace -o 0x400584 -C -c ../overflow1 CBBBBBBBBAAAAAAAA
