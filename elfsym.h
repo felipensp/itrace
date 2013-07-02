@@ -25,8 +25,9 @@ typedef struct {
 	uintptr_t phaddr;    /* Program header address            */
 	uintptr_t symtab;    /* Dynamic symbol table              */
 	uintptr_t strtab;    /* Dynamic string table              */
-	unsigned int phnum;  /* Number of program headers         */
-	unsigned int nsyms;  /* Number of symbols                 */
+	size_t phnum;        /* Number of program headers         */
+	size_t phentsize;    /* Program header entry size         */
+	size_t nsyms;        /* Number of symbols                 */
 	elfsym_sym *syms;    /* Symbols                           */
 } elfsym_info;
 

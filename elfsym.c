@@ -54,17 +54,19 @@ static void _read_elf_header(uintptr_t baddr)
 	e_info.baddr = baddr;
 
 	if (e_info.class == 32) {
-		e_info.phaddr = e_info.baddr + ehdr.e_phoff;
-		e_info.phnum  = ehdr.e_phnum;
-		e_info.pie    = (ehdr.e_type == ET_DYN);
+		e_info.phaddr    = e_info.baddr + ehdr.e_phoff;
+		e_info.phnum     = ehdr.e_phnum;
+		e_info.pie       = (ehdr.e_type == ET_DYN);
+		e_info.phentsize = ehdr.e_phentsize;
 	} else {
 		Elf64_Ehdr ehdr;
 
 		ptrace_read(tracee.pid, baddr, &ehdr, sizeof(ehdr));
 
-		e_info.phaddr = e_info.baddr + ehdr.e_phoff;
-		e_info.phnum  = ehdr.e_phnum;
-		e_info.pie    = (ehdr.e_type == ET_DYN);
+		e_info.phaddr    = e_info.baddr + ehdr.e_phoff;
+		e_info.phnum     = ehdr.e_phnum;
+		e_info.pie       = (ehdr.e_type == ET_DYN);
+		e_info.phentsize = ehdr.e_phentsize;
 	}
 }
 
@@ -167,21 +169,12 @@ static int _read_elf_dyn_entry(uintptr_t addr, uintptr_t *d_ptr, long *d_val)
 	}
 }
 
-static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t memsz)
+static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t mem_size,
+	size_t rel_ent_size)
 {
 	int i;
-	size_t rela_size;
 
-	if (rel_type == DT_REL) {
-		rela_size = e_info.class == 32 ? sizeof(Elf32_Rel) : sizeof(Elf64_Rel);
-	} else if (rel_type == DT_RELA) {
-		rela_size = e_info.class == 32 ? sizeof(Elf32_Rela) : sizeof(Elf64_Rela);
-	} else {
-		printf("[!] Invalid relocation type\n");
-		return;
-	}
-
-	for (i = 0; i < memsz / rela_size; ++i) {
+	for (i = 0; i < mem_size / rel_ent_size; ++i) {
 		char name[MAX_SYM_NAME+1];
 		uintptr_t addr;
 		uintptr_t symname = _read_elf_rela_symbol(rel_type, rel_addr, &addr);
@@ -191,7 +184,7 @@ static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t memsz)
 
 		_add_symbol(name, addr);
 
-		rel_addr += rela_size;
+		rel_addr += rel_ent_size;
 	}
 }
 
@@ -199,29 +192,29 @@ static void _find_dynamic()
 {
 	uintptr_t addr = e_info.phaddr;
 	uintptr_t rel_addr, rel_size;
-	long memsz;
+	long mem_size;
 	int ptype, i, rel_type;
-	size_t phdr_size = e_info.class == 32 ? sizeof(Elf32_Phdr) : sizeof(Elf64_Phdr);
 	size_t dyn_size = e_info.class == 32 ? sizeof(Elf32_Dyn) : sizeof(Elf64_Dyn);
+	size_t rel_ent_size = 0;
 
 	for (i = 0; i < e_info.phnum; ++i) {
 		uintptr_t vaddr;
 
-		ptype = _read_elf_phdr_entry(addr, &vaddr, &memsz);
+		ptype = _read_elf_phdr_entry(addr, &vaddr, &mem_size);
 
 		if (ptype == PT_DYNAMIC) {
 			addr = vaddr;
 			break;
 		}
 
-		addr += phdr_size;
+		addr += e_info.phentsize;
 	}
 
 	if (ptype != PT_DYNAMIC) {
 		return;
 	}
 
-	for (i = 0; i < memsz / dyn_size; ++i) {
+	for (i = 0; i < mem_size / dyn_size; ++i) {
 		uintptr_t d_ptr;
 		long d_val;
 		int d_tag = _read_elf_dyn_entry(addr, &d_ptr, &d_val);
@@ -242,13 +235,17 @@ static void _find_dynamic()
 			case DT_PLTREL:
 				rel_type = d_val;
 				break;
+			case DT_RELAENT:
+			case DT_RELENT:
+				rel_ent_size = d_val;
+				break;
 		}
 
 		addr += dyn_size;
 	}
 
-	if (e_info.symtab != 0 && e_info.strtab != 0) {
-		_find_plt_symbols(rel_type, rel_addr, rel_size);
+	if (e_info.symtab != 0 && e_info.strtab != 0 && rel_ent_size != 0) {
+		_find_plt_symbols(rel_type, rel_addr, rel_size, rel_ent_size);
 	}
 }
 
