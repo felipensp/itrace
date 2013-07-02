@@ -33,7 +33,7 @@ void ptrace_read_long(pid_t pid, uintptr_t addr, void *vptr)
 void ptrace_read(pid_t pid, uintptr_t addr, void *vptr, long len)
 {
 	const size_t long_size = sizeof(long);
-	int i = 0, j = len / long_size, is_exact = len % long_size;
+	size_t i = 0, j = len / long_size, is_exact = len % long_size;
 	long word;
 	void *saddr = vptr;
 
