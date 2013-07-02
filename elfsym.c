@@ -76,17 +76,17 @@ static int _read_elf_rela_symbol(int type, uintptr_t rel_addr, uintptr_t *offset
 
 		switch (type) {
 			case DT_REL: {
-				Elf32_Rela rela;
-				ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
-				*offset = adjust_addr(rela.r_offset);
-				r_info = ELF32_R_SYM(rela.r_info);
+					Elf32_Rel rel;
+					ptrace_read(tracee.pid, rel_addr, &rel, sizeof(rel));
+					*offset = adjust_addr(rel.r_offset);
+					r_info = ELF32_R_SYM(rel.r_info);
 				}
 				break;
 			case DT_RELA: {
-				Elf32_Rela rela;
-				ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
-				*offset = adjust_addr(rela.r_offset);
-				r_info = ELF32_R_SYM(rela.r_info);
+					Elf32_Rela rela;
+					ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
+					*offset = adjust_addr(rela.r_offset);
+					r_info = ELF32_R_SYM(rela.r_info);
 				}
 				break;
 		}
@@ -96,14 +96,29 @@ static int _read_elf_rela_symbol(int type, uintptr_t rel_addr, uintptr_t *offset
 
 		return sym.st_name;
 	} else {
-		Elf64_Rela rela;
 		Elf64_Sym sym;
+		size_t r_info;
 
-		ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
-		ptrace_read(tracee.pid, e_info.symtab +
-			(sizeof(sym) * ELF64_R_SYM(rela.r_info)), &sym, sizeof(sym));
+		switch (type) {
+			case DT_REL: {
+					Elf64_Rel rel;
+					ptrace_read(tracee.pid, rel_addr, &rel, sizeof(rel));
+					*offset = adjust_addr(rel.r_offset);
+					r_info = ELF64_R_SYM(rel.r_info);
+				}
+				break;
+			case DT_RELA: {
+					Elf64_Rela rela;
+					ptrace_read(tracee.pid, rel_addr, &rela, sizeof(rela));
+					*offset = adjust_addr(rela.r_offset);
+					r_info = ELF64_R_SYM(rela.r_info);
+				}
+				break;
+		}
 
-		*offset = adjust_addr(rela.r_offset);
+		ptrace_read(tracee.pid, e_info.symtab +	(sizeof(sym) * r_info),
+			&sym, sizeof(sym));
+
 		return sym.st_name;
 	}
 }
