@@ -25,7 +25,7 @@ static void _add_symbol(const char *name, uintptr_t addr)
 {
 	if (e_info.syms == NULL || e_info.nsyms % 5 == 0) {
 		e_info.syms = realloc(e_info.syms,
-			e_info.nsyms + (sizeof(elfsym_sym) * 5));
+			sizeof(elfsym_sym) * (e_info.nsyms + 5));
 
 		if (e_info.syms == NULL) {
 			printf("[!] Failed to realloc symbol!");
@@ -169,7 +169,7 @@ static int _read_elf_dyn_entry(uintptr_t addr, uintptr_t *d_ptr, long *d_val)
 	}
 }
 
-static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t mem_size,
+static void _find_rel_symbols(int rel_type, uintptr_t rel_addr, uintptr_t mem_size,
 	size_t rel_ent_size)
 {
 	int i;
@@ -179,10 +179,13 @@ static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t mem_si
 		uintptr_t addr;
 		uintptr_t symname = _read_elf_rela_symbol(rel_type, rel_addr, &addr);
 
+		memset(name, 0, sizeof(name));
 		ptrace_read(tracee.pid, e_info.strtab + symname, name, sizeof(name));
 		name[MAX_SYM_NAME] = 0;
 
-		_add_symbol(name, addr);
+		if (name[0] != '\0') {
+			_add_symbol(name, addr);
+		}
 
 		rel_addr += rel_ent_size;
 	}
@@ -191,11 +194,11 @@ static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t mem_si
 static void _find_dynamic()
 {
 	uintptr_t addr = e_info.phaddr;
-	uintptr_t rel_addr, rel_size;
+	uintptr_t rel_dyn_addr, rel_plt_addr;
 	long mem_size;
 	int ptype, i, rel_type;
 	size_t dyn_size = e_info.class == 32 ? sizeof(Elf32_Dyn) : sizeof(Elf64_Dyn);
-	size_t rel_ent_size = 0;
+	size_t rel_ent_size = 0, rel_dyn_size, rel_plt_size;
 
 	for (i = 0; i < e_info.phnum; ++i) {
 		uintptr_t vaddr;
@@ -226,11 +229,21 @@ static void _find_dynamic()
 			case DT_STRTAB:
 				e_info.strtab = d_ptr;
 				break;
+			/* .rel[a].dyn */
+			case DT_REL:
+			case DT_RELA:
+				rel_dyn_addr = d_ptr;
+				break;
+			/* .rel[a].plt */
 			case DT_JMPREL:
-				rel_addr = d_ptr;
+				rel_plt_addr = d_ptr;
+				break;
+			case DT_RELSZ:
+			case DT_RELASZ:
+				rel_dyn_size = d_val;
 				break;
 			case DT_PLTRELSZ:
-				rel_size = d_val;
+				rel_plt_size = d_val;
 				break;
 			case DT_PLTREL:
 				rel_type = d_val;
@@ -244,8 +257,13 @@ static void _find_dynamic()
 		addr += dyn_size;
 	}
 
-	if (e_info.symtab != 0 && e_info.strtab != 0 && rel_ent_size != 0) {
-		_find_plt_symbols(rel_type, rel_addr, rel_size, rel_ent_size);
+	if (e_info.symtab != 0 && e_info.strtab != 0) {
+		if (rel_dyn_addr != 0) {
+			_find_rel_symbols(rel_type, rel_dyn_addr, rel_dyn_size, rel_ent_size);
+		}
+		if (rel_plt_addr != 0) {
+			_find_rel_symbols(rel_type, rel_plt_addr, rel_plt_size, rel_ent_size);
+		}
 	}
 }
 
