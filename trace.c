@@ -87,15 +87,13 @@ static void _dump_stack(const struct user_regs_struct *regs)
 static char* _instr_comments(ud_t *ud_obj,
 	const struct user_regs_struct *regs)
 {
-	const char *instr = ud_insn_asm(ud_obj);
 	char *comment = NULL;
 
-	if (memcmp(instr, "syscall", sizeof("syscall")-1) == 0
-		|| memcmp(instr, "int $0x80", sizeof("int $0x80")-1) == 0) {
+	if (ud_obj->mnemonic == UD_Isyscall || ud_obj->mnemonic == UD_Isysenter) {
 		/* system call */
 		comment = malloc(sizeof(char) * 50);
 		snprintf(comment, 50, " # %s = %ld", STRFY(reg_eax), regs->reg_eax);
-	} else if (memcmp(instr, "ret", sizeof("ret")-1) == 0) {
+	} else if (ud_obj->mnemonic == UD_Iret || ud_obj->mnemonic == UD_Iretf) {
 		/* return */
 		long retaddr;
 
@@ -103,13 +101,14 @@ static char* _instr_comments(ud_t *ud_obj,
 		ptrace_read_long(tracee.pid, regs->reg_esp, &retaddr);
 
 		snprintf(comment, 50, " # 0x%" ADDR_FMT, retaddr);
-	} else if (memcmp(instr, "jmp", sizeof("jmp")-1) == 0) {
+	} else if (ud_obj->mnemonic == UD_Ijmp) {
 		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
-		const int insn_len = ud_insn_len(ud_obj);
 		const char *sym = NULL;
 
 		/* PLT stub */
 		if (e_info.class == 64 && op->type == UD_OP_MEM && op->base == UD_R_RIP) {
+			const int insn_len = ud_insn_len(ud_obj);
+
 			sym = resolv_symbol(regs->reg_eip +	op->lval.sdword + insn_len);
 		} else if (e_info.class == 32 && op->type == UD_OP_MEM) {
 			sym = resolv_symbol(op->lval.sdword);
