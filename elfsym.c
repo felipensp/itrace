@@ -53,7 +53,7 @@ static void _read_elf_header(uintptr_t baddr)
 	e_info.class = (ehdr.e_ident[EI_CLASS] == 1 ? 32 : 64);
 	e_info.baddr = baddr;
 
-	if (e_info.class == 32 && ehdr.e_ident[EI_CLASS] != 0) {
+	if (e_info.class == 32) {
 		e_info.phaddr = e_info.baddr + ehdr.e_phoff;
 		e_info.phnum  = ehdr.e_phnum;
 		e_info.pie    = (ehdr.e_type == ET_DYN);
