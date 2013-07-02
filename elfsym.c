@@ -184,9 +184,7 @@ static void _find_plt_symbols(int rel_type, uintptr_t rel_addr, uintptr_t memsz)
 	for (i = 0; i < memsz / rela_size; ++i) {
 		char name[MAX_SYM_NAME+1];
 		uintptr_t addr;
-		uintptr_t symname;
-
-		symname = _read_elf_rela_symbol(rel_type, rel_addr, &addr);
+		uintptr_t symname = _read_elf_rela_symbol(rel_type, rel_addr, &addr);
 
 		ptrace_read(tracee.pid, e_info.strtab + symname, name, sizeof(name));
 		name[MAX_SYM_NAME] = 0;
