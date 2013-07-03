@@ -41,7 +41,11 @@ pid_t trace_program()
 		printf("Arg[%d]: %s\n", nargs, tracee.prog_args[nargs]);
 	}
 
-	if ((child = fork()) == 0) {
+	child = fork();
+
+	if (child == 0) {
+		/* child process */
+
 		if (ptrace_traceme() < 0) {
 			puts("[!] ptrace_traceme failed!");
 			exit(1);
@@ -49,6 +53,9 @@ pid_t trace_program()
 		if (execv(tracee.prog, tracee.prog_args) == -1) {
 			printf("[!] execv() failed (%s)\n", strerror(errno));
 		}
+		exit(1);
+	} else if (child < 0) {
+		printf("[!] fork() failed (%s)\n", strerror(errno));
 		exit(1);
 	}
 
