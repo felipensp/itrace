@@ -15,6 +15,7 @@
 #include "trace.h"
 #include "ptrace.h"
 #include "elfsym.h"
+#include "disas.h"
 
 resolv_info r_info;
 

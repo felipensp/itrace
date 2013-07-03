@@ -10,12 +10,11 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
-#include <libudis86/extern.h>
-#include <libudis86/types.h>
 #include "trace.h"
 #include "ptrace.h"
 #include "resolv.h"
 #include "elfsym.h"
+#include "disas.h"
 
 pid_t trace_pid()
 {
@@ -54,115 +53,6 @@ pid_t trace_program()
 	}
 
 	return child;
-}
-
-static void _dump_regs(const struct user_regs_struct *regs)
-{
-	/* Displays register information */
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_eax), regs->reg_eax);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebx), regs->reg_ebx);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_ecx), regs->reg_ecx);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_edx), regs->reg_edx);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esi), regs->reg_esi);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_edi), regs->reg_edi);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_esp), regs->reg_esp);
-	printf("%s=0x%" ADDR_FMT " | ", STRFY(reg_ebp), regs->reg_ebp);
-	printf("%s=0x%" ADDR_FMT " \n", STRFY(reg_eip), regs->reg_eip);
-}
-
-static void _dump_stack(const struct user_regs_struct *regs)
-{
-	long addr;
-	int i;
-
-	/* Displays 4 long from the top of stack */
-	printf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
-	for (i = 0; i < 4; ++i) {
-		ptrace_read_long(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
-		printf("0x%" ADDR_FMT " ", addr);
-	}
-	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
-}
-
-static char* _instr_comments(ud_t *ud_obj,
-	const struct user_regs_struct *regs)
-{
-	char *comment = NULL;
-
-	if (ud_obj->mnemonic == UD_Isyscall || ud_obj->mnemonic == UD_Isysenter) {
-		/* system call */
-		comment = malloc(sizeof(char) * 50);
-		snprintf(comment, 50, " # %s = %ld", STRFY(reg_eax), regs->reg_eax);
-	} else if (ud_obj->mnemonic == UD_Iret || ud_obj->mnemonic == UD_Iretf) {
-		/* return */
-		long retaddr;
-
-		comment = malloc(sizeof(char) * 50);
-		ptrace_read_long(tracee.pid, regs->reg_esp, &retaddr);
-
-		snprintf(comment, 50, " # 0x%" ADDR_FMT, retaddr);
-	} else if (ud_obj->mnemonic == UD_Ijmp) {
-		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
-		const char *sym = NULL;
-
-		/* PLT stub */
-		if (e_info.class == 64 && op->type == UD_OP_MEM && op->base == UD_R_RIP) {
-			const int insn_len = ud_insn_len(ud_obj);
-
-			sym = resolv_symbol(regs->reg_eip +	op->lval.sdword + insn_len);
-		} else if (e_info.class == 32 && op->type == UD_OP_MEM) {
-			sym = resolv_symbol(op->lval.sdword);
-		}
-
-		if (sym) {
-			comment = malloc(sizeof(char) * 80);
-			snprintf(comment, 80, " # %s", sym);
-		}
-	}
-	return comment;
-}
-
-static void _dump_instr(const struct user_regs_struct *regs)
-{
-	unsigned char instrs[16] = {0};
-	char *comment = NULL;
-	long value;
-	ud_t ud_obj;
-	int i;
-	uintptr_t addr = regs->reg_eip;
-
-	ud_init(&ud_obj);
-	ud_set_mode(&ud_obj, e_info.class);
-	ud_set_vendor(&ud_obj, UD_VENDOR_AMD);
-	ud_set_pc(&ud_obj, regs->reg_eip);
-	ud_set_syntax(&ud_obj, tracee.syntax ? UD_SYN_INTEL : UD_SYN_ATT);
-	ud_set_input_buffer(&ud_obj, instrs, sizeof(instrs)-1);
-
-	for (i = 0; i < sizeof(instrs) / sizeof(long); i += sizeof(long)) {
-		ptrace_read_long(tracee.pid, regs->reg_eip + (sizeof(long) * i), &value);
-		memcpy(instrs + (sizeof(long) * i), &value, sizeof(long));
-	}
-
-	if (tracee.flags & SHOW_REGISTERS) {
-		_dump_regs(regs);
-	}
-
-	if (tracee.flags & SHOW_STACK) {
-		_dump_stack(regs);
-	}
-
-	ud_disassemble(&ud_obj);
-
-	if (tracee.flags & SHOW_COMMENTS) {
-		comment = _instr_comments(&ud_obj, regs);
-	}
-
-	printf("%#" PRIxPTR ":\t%-20s\t%s%s\n",
-		addr, ud_insn_hex(&ud_obj), ud_insn_asm(&ud_obj), comment ? comment : "");
-
-	if (comment) {
-		free(comment);
-	}
 }
 
 static void _abort_execution()
@@ -225,7 +115,7 @@ void trace_loop()
 			}
 
 			if (tracee.num_inst == 0 || counter <= tracee.num_inst) {
-				_dump_instr(&regs);
+				disas_instr(&regs);
 			}
 		}
 	}
