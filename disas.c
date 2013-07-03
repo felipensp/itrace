@@ -16,7 +16,7 @@
 #include "resolv.h"
 
 /*
- * Returns the register name as string
+ * Returns the register name according to the ELF class
  */
 static const char* _reg_name(size_t reg)
 {
@@ -35,7 +35,7 @@ static const char* _reg_name(size_t reg)
 }
 
 /*
- * Displays the register information
+ * Displays the register information according to the ELF class
  */
 static void _dump_regs(const struct user_regs_struct *regs)
 {
@@ -108,6 +108,9 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 	return comment;
 }
 
+/*
+ * Disassemble the instruction pointed by the EIP/RIP register
+ */
 void disas_instr(const struct user_regs_struct *regs)
 {
 	unsigned char instrs[16] = {0};
