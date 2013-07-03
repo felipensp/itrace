@@ -21,7 +21,7 @@ typedef enum {
 	SHOW_COMMENTS  = 1<<2, /* -C */
 	SHOW_MAPS      = 1<<3, /* -m */
 	IGNORE_LIBS    = 1<<4  /* -i */
-} trace_show_opts;
+} trace_flags;
 
 /*
  * General information of tracee and argument options
