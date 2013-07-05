@@ -18,10 +18,10 @@
 
 pid_t trace_pid()
 {
-	printf("[+] Attaching to pid %d\n", tracee.pid);
+	iprintf("[+] Attaching to pid %d\n", tracee.pid);
 
 	if (ptrace_attach(tracee.pid) < 0) {
-		puts("[!] ptrace_attach failed!");
+		iprintf("[!] ptrace_attach failed!\n");
 		return 0;
 	}
 
@@ -35,10 +35,10 @@ pid_t trace_program()
 
 	assert(tracee.prog != NULL);
 
-	printf("[+] Starting and tracing `%s'\n", tracee.prog);
+	iprintf("[+] Starting and tracing `%s'\n", tracee.prog);
 
 	for (nargs = 0; tracee.prog_args[nargs]; ++nargs) {
-		printf("Arg[%d]: %s\n", nargs, tracee.prog_args[nargs]);
+		iprintf("Arg[%d]: %s\n", nargs, tracee.prog_args[nargs]);
 	}
 
 	child = fork();
@@ -47,15 +47,15 @@ pid_t trace_program()
 		/* child process */
 
 		if (ptrace_traceme() < 0) {
-			puts("[!] ptrace_traceme failed!");
+			iprintf("[!] ptrace_traceme failed!\n");
 			exit(1);
 		}
 		if (execv(tracee.prog, tracee.prog_args) == -1) {
-			printf("[!] execv() failed (%s)\n", strerror(errno));
+			iprintf("[!] execv() failed (%s)\n", strerror(errno));
 		}
 		exit(1);
 	} else if (child < 0) {
-		printf("[!] fork() failed (%s)\n", strerror(errno));
+		iprintf("[!] fork() failed (%s)\n", strerror(errno));
 		exit(1);
 	}
 
@@ -64,7 +64,7 @@ pid_t trace_program()
 
 static void _abort_execution()
 {
-	printf("[!] Detaching...\n");
+	iprintf("[!] Detaching...\n");
 	ptrace_detach(tracee.pid);
 	kill(tracee.pid, SIGINT);
 	exit(1);
@@ -73,7 +73,7 @@ static void _abort_execution()
 void trace_loop()
 {
 	int status, signo = 0, active = (tracee.offset == 0);
-	unsigned int counter = 0;
+	unsigned int counter = 0, total = 0;
 	struct user_regs_struct regs;
 
 	signal(SIGINT, _abort_execution);
@@ -82,7 +82,7 @@ void trace_loop()
 
 	while (1) {
 		if (ptrace(PTRACE_SINGLESTEP, tracee.pid, NULL, signo) != 0) {
-			puts("ptrace() failed on single-stepping!");
+			iprintf("ptrace() failed on single-stepping!\n");
 			exit(1);
 		}
 		wait(&status);
@@ -106,7 +106,7 @@ void trace_loop()
 					break;
 			}
 		}
-
+		++total;
 		ptrace(PTRACE_GETREGS, tracee.pid, NULL, &regs);
 
 		if (!active) {
@@ -127,10 +127,14 @@ void trace_loop()
 		}
 	}
 out:
-	printf("[!] Program exited with status %d\n", WEXITSTATUS(status));
+	iprintf("[!] Program exited with status %d\n", WEXITSTATUS(status));
 
 	if (tracee.flags & SHOW_MAPS) {
 		resolv_show_maps();
+	}
+	
+	if (tracee.flags & SHOW_COUNT) {
+		printf("Instructions executed=%u\n", total);
 	}
 
 	resolv_shutdown();

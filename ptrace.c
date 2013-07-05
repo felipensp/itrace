@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include "ptrace.h"
+#include "trace.h"
 
 long ptrace_attach(pid_t pid)
 {
@@ -44,7 +45,7 @@ void ptrace_read(pid_t pid, uintptr_t addr, void *vptr, long len)
 		errno = 0;
 		word = ptrace(PTRACE_PEEKTEXT, pid, addr + i * long_size, NULL);
 		if (errno != 0) {
-			printf("[!] PTRACE_PEEKTEXT failed (%s)\n", strerror(errno));
+			iprintf("[!] PTRACE_PEEKTEXT failed (%s)\n", strerror(errno));
 		}
 
 		memcpy(saddr, &word, i == j ? (len % long_size) : long_size);
@@ -56,6 +57,6 @@ void ptrace_read(pid_t pid, uintptr_t addr, void *vptr, long len)
 void ptrace_write(pid_t pid, uintptr_t addr, long value)
 {
 	if (ptrace(PTRACE_POKETEXT, pid, addr, value) == -1) {
-		printf("[!] PTRACE_POKETEXT failed (%s)\n", strerror(errno));
+		iprintf("[!] PTRACE_POKETEXT failed (%s)\n", strerror(errno));
 	}
 }

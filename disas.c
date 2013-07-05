@@ -39,15 +39,15 @@ static const char* _reg_name(size_t reg)
  */
 static void _dump_regs(const struct user_regs_struct *regs)
 {
-	printf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EAX), regs->reg_eax);
-	printf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EBX), regs->reg_ebx);
-	printf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_ECX), regs->reg_ecx);
-	printf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EDX), regs->reg_edx);
-	printf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_ESI), regs->reg_esi);
-	printf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_EDI), regs->reg_edi);
-	printf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_ESP), regs->reg_esp);
-	printf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EBP), regs->reg_ebp);
-	printf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_RIP), regs->reg_eip);
+	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EAX), regs->reg_eax);
+	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EBX), regs->reg_ebx);
+	iprintf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_ECX), regs->reg_ecx);
+	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EDX), regs->reg_edx);
+	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_ESI), regs->reg_esi);
+	iprintf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_EDI), regs->reg_edi);
+	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_ESP), regs->reg_esp);
+	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EBP), regs->reg_ebp);
+	iprintf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_RIP), regs->reg_eip);
 }
 
 /*
@@ -58,14 +58,14 @@ static void _dump_stack(const struct user_regs_struct *regs)
 	long addr;
 	int i;
 
-	printf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
+	iprintf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
 
 	for (i = 0; i < 4; ++i) {
 		ptrace_read_long(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
-		printf("0x%" ADDR_FMT " ", addr);
+		iprintf("0x%" ADDR_FMT " ", addr);
 	}
 
-	printf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
+	iprintf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
 }
 
 /*
@@ -143,7 +143,7 @@ void disas_instr(const struct user_regs_struct *regs)
 		comment = _instr_comments(&ud_obj, regs);
 	}
 
-	printf("%#" PRIxPTR ":\t%-20s\t%s%s\n",
+	iprintf("%#" PRIxPTR ":\t%-20s\t%s%s\n",
 		addr,
 		ud_insn_hex(&ud_obj),
 		ud_insn_asm(&ud_obj),

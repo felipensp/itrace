@@ -104,9 +104,9 @@ void resolv_show_maps()
 {
 	int i;
 
-	printf("Maps:\n");
+	iprintf("Maps:\n");
 	for (i = 0; i < r_info.num_segments; ++i) {
-		printf("%" ADDR_FMT "-%" ADDR_FMT " - %s (%s) %d\n",
+		iprintf("%" ADDR_FMT "-%" ADDR_FMT " - %s (%s) %d\n",
 			r_info.segments[i].saddr,
 			r_info.segments[i].eaddr,
 			r_info.segments[i].fname,
@@ -118,7 +118,7 @@ void resolv_show_maps()
 void resolv_startup()
 {
 	if (!_map_segments()) {
-		printf("[!] Failed to read /proc/%d/maps file!", tracee.pid);
+		iprintf("[!] Failed to read /proc/%d/maps file!", tracee.pid);
 		return;
 	}
 

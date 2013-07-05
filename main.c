@@ -20,10 +20,12 @@ static void usage()
 		 "-C, --comments    Show comments after disassembled instruction\n"
 		 "-h, --help        Show this help\n"
 		 "-i, --ignore-libs Disable tracing of libraries segments\n"
+		 "-I, --show-count  Show the number of instructions executed\n"
 		 "-m, --maps        Show the maps file after execution\n"
 		 "-n, --max-inst    Max number of instruction to trace\n"
 		 "-o, --offset      Address to start tracing\n"
 		 "-p, --pid         Attach to supplied pid\n"
+		 "-q, --quiet       Do not show default output\n"
 		 "-r, --show-regs   Dump registers on each instruction\n"
 		 "-s, --show-stack  Dump part of stack from top on each instruction\n"
 		 "-S, --syntax      Choose the syntax to be used on disassemble\n"
@@ -44,10 +46,12 @@ int main(int argc, char **argv)
 		{"comments",   no_argument,       0, 'C'},
 		{"help",       no_argument,       0, 'h'},
 		{"ignore-libs",no_argument,       0, 'i'},
+		{"show-count", no_argument,       0, 'I'},
 		{"show-maps",  no_argument,       0, 'm'},
 		{"max-inst",   required_argument, 0, 'n'},
 		{"offset",     required_argument, 0, 'o'},
 		{"pid",        required_argument, 0, 'p'},
+		{"quiet",      no_argument,       0, 'q'},
 		{"show-regs",  no_argument,       0, 'r'},
 		{"show-stack", no_argument,       0, 's'},
 		{"syntax",     required_argument, 0, 'S'},
@@ -60,7 +64,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	while ((c = getopt_long(argc, argv, "c:Chimn:o:p:rsS:v", long_opts, &opt_index)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:ChiImn:o:p:qrsS:v", long_opts, &opt_index)) != -1) {
 		switch (c) {
 			case 'c':
 				tracee.prog = optarg;
@@ -78,6 +82,10 @@ int main(int argc, char **argv)
 			case 'i':
 				tracee.flags |= IGNORE_LIBS;
 				break;
+			
+			case 'I':
+				tracee.flags |= SHOW_COUNT;
+				break;
 
 			case 'm':
 				tracee.flags |= SHOW_MAPS;
@@ -93,6 +101,10 @@ int main(int argc, char **argv)
 
 			case 'p':
 				tracee.pid = atol(optarg);
+				break;
+			
+			case 'q':
+				tracee.flags |= QUIET_MODE;
 				break;
 
 			case 'r':

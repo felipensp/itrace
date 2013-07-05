@@ -12,6 +12,8 @@
 #include <sys/user.h>
 #include <stdint.h>
 
+#define iprintf(fmt, ...) do { if (tracee.flags & QUIET_MODE) break; printf(fmt, ##__VA_ARGS__); } while(0)
+
 /*
  * Possible flags passed to itrace
  */
@@ -20,7 +22,9 @@ typedef enum {
 	SHOW_STACK     = 1<<1, /* -s */
 	SHOW_COMMENTS  = 1<<2, /* -C */
 	SHOW_MAPS      = 1<<3, /* -m */
-	IGNORE_LIBS    = 1<<4  /* -i */
+	IGNORE_LIBS    = 1<<4, /* -i */
+	SHOW_COUNT     = 1<<5, /* -I */
+	QUIET_MODE     = 1<<6  /* -q */
 } trace_flags;
 
 /*

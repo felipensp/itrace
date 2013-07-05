@@ -28,7 +28,7 @@ static void _add_symbol(const char *name, uintptr_t addr)
 			sizeof(elfsym_sym) * (e_info.nsyms + 5));
 
 		if (e_info.syms == NULL) {
-			printf("[!] Failed to realloc symbol!");
+			iprintf("[!] Failed to realloc symbol!");
 			return;
 		}
 	}
@@ -46,7 +46,7 @@ static void _read_elf_header(uintptr_t baddr)
 	ptrace_read(tracee.pid, baddr, &ehdr, sizeof(ehdr));
 
 	if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG) != 0) {
-		printf("[!] Invalid ELF on base address\n");
+		iprintf("[!] Invalid ELF on base address\n");
 		return;
 	}
 
