@@ -18,7 +18,7 @@
 /*
  * Returns the register name according to the ELF class
  */
-static const char* _reg_name(size_t reg)
+static const char* _reg_name(enum ud_type reg)
 {
 	switch (reg) {
 		case UD_R_EAX: return e_info.class == 32 ? "eax" : "rax";
@@ -30,8 +30,28 @@ static const char* _reg_name(size_t reg)
 		case UD_R_ESP: return e_info.class == 32 ? "esp" : "rsp";
 		case UD_R_EBP: return e_info.class == 32 ? "ebp" : "rbp";
 		case UD_R_RIP: return e_info.class == 32 ? "eip" : "rip";
+		default:       return "unknown";
 	}
-	return "unknown";
+}
+
+static long _reg_value(enum ud_type type, const struct user_regs_struct *regs)
+{
+	long val;
+
+	switch (type) {
+		case UD_R_EAX: val = regs->reg_eax; break;
+		case UD_R_EBX: val = regs->reg_ebx; break;
+		case UD_R_ECX: val = regs->reg_ecx; break;
+		case UD_R_EDX: val = regs->reg_edx; break;
+		case UD_R_ESI: val = regs->reg_esi; break;
+		case UD_R_EDI: val = regs->reg_edi; break;
+		case UD_R_ESP: val = regs->reg_esp; break;
+		case UD_R_EBP: val = regs->reg_ebp; break;
+		case UD_R_RIP: val = regs->reg_eip; break;
+		default:       val = 0;
+	}
+
+	return val;
 }
 
 /*
@@ -75,8 +95,19 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 {
 	char *comment = NULL;
 
-	if (ud_obj->mnemonic == UD_Isyscall || ud_obj->mnemonic == UD_Isysenter) {
+	if (ud_obj->mnemonic == UD_Isyscall
+		|| ud_obj->mnemonic == UD_Isysenter
+		|| ud_obj->mnemonic == UD_Iint) {
 		/* system call */
+
+		if (ud_obj->mnemonic == UD_Iint) {
+			const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
+
+			if (op->lval.sdword != 0x80) {
+				return NULL;
+			}
+		}
+
 		comment = malloc(sizeof(char) * 50);
 		snprintf(comment, 50, " # %s = %ld", _reg_name(UD_R_EAX), regs->reg_eax);
 	} else if (ud_obj->mnemonic == UD_Iret || ud_obj->mnemonic == UD_Iretf) {
@@ -104,6 +135,16 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 			comment = malloc(sizeof(char) * 80);
 			snprintf(comment, 80, " # %s@got", sym);
 		}
+	} else if (ud_obj->mnemonic == UD_Iinc) {
+		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
+
+		if (op->type != UD_OP_REG) {
+			return NULL;
+		}
+
+		comment = malloc(sizeof(char) * 80);
+		snprintf(comment, 80, " # %s=%#lx",
+			_reg_name(op->base), _reg_value(op->base, regs));
 	}
 	return comment;
 }
