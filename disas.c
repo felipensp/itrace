@@ -110,8 +110,7 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 				}
 			}
 			comment = malloc(sizeof(char) * 50);
-			snprintf(comment, 50, " # %s = %ld",
-				_reg_name(UD_R_EAX), regs->reg_eax);
+			snprintf(comment, 50, " # syscall number = %ld", regs->reg_eax);
 			break;
 
 		case UD_Iret:    /* ret  */
@@ -183,6 +182,31 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 				}
 			}
 			break;
+
+		case UD_Isub:   /* sub */
+		case UD_Iadd: { /* add */
+				const ud_operand_t *dst = ud_insn_opr(ud_obj, 0);
+				const ud_operand_t *src = ud_insn_opr(ud_obj, 1);
+				long dst_val, src_val = 0;
+
+				switch (src->type) {
+					case UD_OP_REG:
+						src_val = _reg_value(src->base, regs);
+						break;
+					case UD_OP_IMM:
+						src_val = src->lval.sdword;
+						break;
+					default:
+						return NULL;
+				}
+				dst_val = _reg_value(dst->base, regs);
+
+				comment = malloc(sizeof(char) * 80);
+				snprintf(comment, 80, " # %s = %#lx",
+					_reg_name(dst->base), dst_val + src_val);
+			}
+			break;
+
 		default:
 			break;
 	}
