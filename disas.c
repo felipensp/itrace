@@ -129,13 +129,18 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 			sym = resolv_symbol(regs->reg_eip +	op->lval.sdword + insn_len);
 		} else if (e_info.class == 32 && op->type == UD_OP_MEM) {
 			sym = resolv_symbol(op->lval.sdword);
+		} else if (op->type == UD_OP_REG) {
+			comment = malloc(sizeof(char) * 80);
+			snprintf(comment, 80, " # %s = %#lx",
+				_reg_name(op->base), _reg_value(op->base, regs));
+			goto done;
 		}
 
 		if (sym) {
 			comment = malloc(sizeof(char) * 80);
 			snprintf(comment, 80, " # %s@got", sym);
 		}
-	} else if (ud_obj->mnemonic == UD_Iinc) {
+	} else if (ud_obj->mnemonic == UD_Iinc || ud_obj->mnemonic == UD_Ipush) {
 		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
 
 		if (op->type != UD_OP_REG) {
@@ -143,9 +148,10 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 		}
 
 		comment = malloc(sizeof(char) * 80);
-		snprintf(comment, 80, " # %s=%#lx",
+		snprintf(comment, 80, " # %s = %#lx",
 			_reg_name(op->base), _reg_value(op->base, regs));
 	}
+done:
 	return comment;
 }
 
@@ -184,7 +190,7 @@ void disas_instr(const struct user_regs_struct *regs)
 		comment = _instr_comments(&ud_obj, regs);
 	}
 
-	iprintf("%#" PRIxPTR ":\t%-20s\t%s%s\n",
+	iprintf("%#" PRIxPTR ":\t%-20s\t%-30s%s\n",
 		addr,
 		ud_insn_hex(&ud_obj),
 		ud_insn_asm(&ud_obj),
