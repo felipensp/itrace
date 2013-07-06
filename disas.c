@@ -97,6 +97,22 @@ static void _dump_stack(const struct user_regs_struct *regs)
 	iprintf(e_info.class == 32 ? "] 0x%08lx\n" : "] 0x%016lx\n", regs->reg_ebp);
 }
 
+static long _op_value(const ud_operand_t *op, const struct user_regs_struct *regs)
+{
+	switch (op->type) {
+		case UD_OP_REG:
+			return _reg_value(op->base, regs);
+		case UD_OP_IMM:
+			return op->lval.sdword;
+		case UD_OP_MEM:
+		case UD_OP_PTR:
+		case UD_OP_JIMM:
+		case UD_OP_CONST:
+		default:
+			return 0;
+	}
+}
+
 /*
  * Provides additional comments to the disassembled instruction
  */
@@ -224,6 +240,17 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 				comment = malloc(sizeof(char) * 80);
 				snprintf(comment, 80, " # %s = %#lx",
 					_reg_name(dst->base), dst_val);
+			}
+			break;
+
+		case UD_Ixor: { /* xor */
+				const ud_operand_t *dst = ud_insn_opr(ud_obj, 0);
+				long op_val  = _op_value(dst, regs);
+				long op2_val = _op_value(ud_insn_opr(ud_obj, 1), regs);
+
+				comment = malloc(sizeof(char) * 80);
+				snprintf(comment, 80, " # %s = %#lx",
+					_reg_name(dst->base), op_val ^ op2_val);
 			}
 			break;
 
