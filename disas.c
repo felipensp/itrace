@@ -34,6 +34,9 @@ static const char* _reg_name(enum ud_type reg)
 	}
 }
 
+/*
+ * Returns the value of register
+ */
 static long _reg_value(enum ud_type type, const struct user_regs_struct *regs)
 {
 	long val;
@@ -95,63 +98,94 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 {
 	char *comment = NULL;
 
-	if (ud_obj->mnemonic == UD_Isyscall
-		|| ud_obj->mnemonic == UD_Isysenter
-		|| ud_obj->mnemonic == UD_Iint) {
-		/* system call */
+	switch (ud_obj->mnemonic) {
+		case UD_Isyscall:  /* syscall   */
+		case UD_Isysenter: /* sysenter  */
+		case UD_Iint:      /* int $0x80 */
+			if (ud_obj->mnemonic == UD_Iint) {
+				const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
 
-		if (ud_obj->mnemonic == UD_Iint) {
-			const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
-
-			if (op->lval.sdword != 0x80) {
-				return NULL;
+				if (op->lval.sdword != 0x80) {
+					return NULL;
+				}
 			}
-		}
+			comment = malloc(sizeof(char) * 50);
+			snprintf(comment, 50, " # %s = %ld",
+				_reg_name(UD_R_EAX), regs->reg_eax);
+			break;
 
-		comment = malloc(sizeof(char) * 50);
-		snprintf(comment, 50, " # %s = %ld", _reg_name(UD_R_EAX), regs->reg_eax);
-	} else if (ud_obj->mnemonic == UD_Iret || ud_obj->mnemonic == UD_Iretf) {
-		/* return */
-		long retaddr;
+		case UD_Iret:    /* ret  */
+		case UD_Iretf: { /* retf */
+				long retaddr = 0;
 
-		comment = malloc(sizeof(char) * 50);
-		ptrace_read_long(tracee.pid, regs->reg_esp, &retaddr);
+				comment = malloc(sizeof(char) * 50);
+				ptrace_read(tracee.pid, regs->reg_esp, &retaddr,
+					(e_info.class == 32 ? 4 : 8));
 
-		snprintf(comment, 50, " # 0x%" ADDR_FMT, retaddr);
-	} else if (ud_obj->mnemonic == UD_Ijmp) {
-		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
-		const char *sym = NULL;
+				snprintf(comment, 50, " # %#lx", retaddr);
+			}
+			break;
 
-		/* PLT stub */
-		if (e_info.class == 64 && op->type == UD_OP_MEM && op->base == UD_R_RIP) {
-			const int insn_len = ud_insn_len(ud_obj);
+		case UD_Ijmp: { /* jmp */
+				const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
+				const char *sym = NULL;
 
-			sym = resolv_symbol(regs->reg_eip +	op->lval.sdword + insn_len);
-		} else if (e_info.class == 32 && op->type == UD_OP_MEM) {
-			sym = resolv_symbol(op->lval.sdword);
-		} else if (op->type == UD_OP_REG) {
-			comment = malloc(sizeof(char) * 80);
-			snprintf(comment, 80, " # %s = %#lx",
-				_reg_name(op->base), _reg_value(op->base, regs));
-			goto done;
-		}
+				if (e_info.class == 64
+					&& op->type == UD_OP_MEM
+					&& op->base == UD_R_RIP) {
+					/* Possible PLT stub on x86_64 */
 
-		if (sym) {
-			comment = malloc(sizeof(char) * 80);
-			snprintf(comment, 80, " # %s@got", sym);
-		}
-	} else if (ud_obj->mnemonic == UD_Iinc || ud_obj->mnemonic == UD_Ipush) {
-		const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
+					sym = resolv_symbol(
+						regs->reg_eip +	op->lval.sdword + ud_insn_len(ud_obj));
 
-		if (op->type != UD_OP_REG) {
-			return NULL;
-		}
+				} else if (e_info.class == 32 && op->type == UD_OP_MEM) {
+					/* Possible PLT stub on x86 */
+					sym = resolv_symbol(op->lval.sdword);
 
-		comment = malloc(sizeof(char) * 80);
-		snprintf(comment, 80, " # %s = %#lx",
-			_reg_name(op->base), _reg_value(op->base, regs));
+				} else if (op->type == UD_OP_REG) {
+					comment = malloc(sizeof(char) * 80);
+					snprintf(comment, 80, " # %s = %#lx",
+						_reg_name(op->base), _reg_value(op->base, regs));
+
+					return comment;
+				}
+
+				if (sym) {
+					comment = malloc(sizeof(char) * 80);
+					snprintf(comment, 80, " # %s@got", sym);
+				}
+			}
+			break;
+
+		case UD_Ipop:    /* pop  */
+		case UD_Iinc:    /* inc  */
+		case UD_Ipush: { /* push */
+				const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
+
+
+				if (op->type != UD_OP_REG) {
+					return NULL;
+				}
+
+				if (ud_obj->mnemonic == UD_Ipop) {
+					long stack_val = 0;
+
+					ptrace_read(tracee.pid, regs->reg_esp, &stack_val,
+						(e_info.class == 32 ? 4 : 8));
+
+					comment = malloc(sizeof(char) * 80);
+					snprintf(comment, 80, " # %s = %#lx",
+						_reg_name(op->base), stack_val);
+				} else {
+					comment = malloc(sizeof(char) * 80);
+					snprintf(comment, 80, " # %s = %#lx",
+						_reg_name(op->base), _reg_value(op->base, regs));
+				}
+			}
+			break;
+		default:
+			break;
 	}
-done:
 	return comment;
 }
 
