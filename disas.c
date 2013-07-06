@@ -62,15 +62,18 @@ static long _reg_value(enum ud_type type, const struct user_regs_struct *regs)
  */
 static void _dump_regs(const struct user_regs_struct *regs)
 {
-	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EAX), regs->reg_eax);
-	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EBX), regs->reg_ebx);
-	iprintf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_ECX), regs->reg_ecx);
-	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EDX), regs->reg_edx);
-	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_ESI), regs->reg_esi);
-	iprintf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_EDI), regs->reg_edi);
-	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_ESP), regs->reg_esp);
-	iprintf("%s=0x%" ADDR_FMT " | ", _reg_name(UD_R_EBP), regs->reg_ebp);
-	iprintf("%s=0x%" ADDR_FMT " \n", _reg_name(UD_R_RIP), regs->reg_eip);
+	const char *fmt  = e_info.class == 32 ? "%s=0x%08lx | " : "%s=0x%016lx | ";
+	const char *fmt2 = e_info.class == 32 ? "%s=0x%08lx \n" : "%s=0x%016lx \n";
+
+	iprintf(fmt,  _reg_name(UD_R_EAX), regs->reg_eax);
+	iprintf(fmt,  _reg_name(UD_R_EBX), regs->reg_ebx);
+	iprintf(fmt2, _reg_name(UD_R_ECX), regs->reg_ecx);
+	iprintf(fmt,  _reg_name(UD_R_EDX), regs->reg_edx);
+	iprintf(fmt,  _reg_name(UD_R_ESI), regs->reg_esi);
+	iprintf(fmt2, _reg_name(UD_R_EDI), regs->reg_edi);
+	iprintf(fmt,  _reg_name(UD_R_ESP), regs->reg_esp);
+	iprintf(fmt,  _reg_name(UD_R_EBP), regs->reg_ebp);
+	iprintf(fmt2, _reg_name(UD_R_RIP), regs->reg_eip);
 }
 
 /*
@@ -78,17 +81,20 @@ static void _dump_regs(const struct user_regs_struct *regs)
  */
 static void _dump_stack(const struct user_regs_struct *regs)
 {
-	long addr;
+	long addr = 0;
 	int i;
+	size_t lsize = e_info.class == 32 ? 4 : 8;
 
-	iprintf("Stack:\n0x%" ADDR_FMT " [ ", regs->reg_esp);
+	iprintf("Stack:\n");
+	iprintf(e_info.class == 32 ? "0x%08lx [ " : "0x%016lx [ ", regs->reg_esp);
 
 	for (i = 0; i < 4; ++i) {
-		ptrace_read_long(tracee.pid, regs->reg_esp + (i * sizeof(long)), &addr);
-		iprintf("0x%" ADDR_FMT " ", addr);
+		ptrace_read(tracee.pid, regs->reg_esp + (i * lsize), &addr, lsize);
+
+		iprintf(e_info.class == 32 ? "0x%08lx " : "0x%016lx ", addr);
 	}
 
-	iprintf("] 0x%" ADDR_FMT "\n", regs->reg_ebp);
+	iprintf(e_info.class == 32 ? "] 0x%08lx\n" : "] 0x%016lx\n", regs->reg_ebp);
 }
 
 /*
@@ -158,9 +164,9 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 
 		case UD_Ipop:    /* pop  */
 		case UD_Iinc:    /* inc  */
+		case UD_Idec:    /* dec  */
 		case UD_Ipush: { /* push */
 				const ud_operand_t *op = ud_insn_opr(ud_obj, 0);
-
 
 				if (op->type != UD_OP_REG) {
 					return NULL;
@@ -176,9 +182,17 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 					snprintf(comment, 80, " # %s = %#lx",
 						_reg_name(op->base), stack_val);
 				} else {
+					long val = _reg_value(op->base, regs);
+
+					if (ud_obj->mnemonic == UD_Iinc) {
+						++val;
+					} else if (ud_obj->mnemonic == UD_Idec) {
+						--val;
+					}
+
 					comment = malloc(sizeof(char) * 80);
 					snprintf(comment, 80, " # %s = %#lx",
-						_reg_name(op->base), _reg_value(op->base, regs));
+						_reg_name(op->base), val);
 				}
 			}
 			break;
@@ -201,9 +215,15 @@ static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 				}
 				dst_val = _reg_value(dst->base, regs);
 
+				if (ud_obj->mnemonic == UD_Isub) {
+					dst_val -= src_val;
+				} else {
+					dst_val += src_val;
+				}
+
 				comment = malloc(sizeof(char) * 80);
 				snprintf(comment, 80, " # %s = %#lx",
-					_reg_name(dst->base), dst_val + src_val);
+					_reg_name(dst->base), dst_val);
 			}
 			break;
 

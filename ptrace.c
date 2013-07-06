@@ -26,11 +26,6 @@ long ptrace_traceme()
 	return ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 }
 
-void ptrace_read_long(pid_t pid, uintptr_t addr, void *vptr)
-{
-	ptrace_read(pid, addr, vptr, sizeof(long));
-}
-
 void ptrace_read(pid_t pid, uintptr_t addr, void *vptr, long len)
 {
 	const size_t long_size = sizeof(long);
