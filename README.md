@@ -16,10 +16,12 @@ itrace [options]
 -C, --comments    Show comments after disassembled instruction
 -h, --help        Show this help
 -i, --ignore-libs Disable tracing of libraries segments
+-I, --show-count  Show the number of instructions executed
 -m, --maps        Show the maps file after execution
 -n, --max-inst    Max number of instruction to trace
 -o, --offset      Address to start tracing
 -p, --pid         Attach to supplied pid
+-q, --quiet       Do not show default output
 -r, --show-regs   Dump registers on each instruction
 -s, --show-stack  Dump part of stack from top on each instruction
 -S, --syntax      Choose the syntax to be used on disassemble
