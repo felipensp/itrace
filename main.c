@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 			case 'i':
 				tracee.flags |= IGNORE_LIBS;
 				break;
-			
+
 			case 'I':
 				tracee.flags |= SHOW_COUNT;
 				break;
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 			case 'p':
 				tracee.pid = atol(optarg);
 				break;
-			
+
 			case 'q':
 				tracee.flags |= QUIET_MODE;
 				break;
@@ -127,11 +127,7 @@ int main(int argc, char **argv)
 		}
 	}
 out:
-	if (tracee.pid) {
-		tracee.pid = trace_pid();
-	} else {
-		tracee.pid = trace_program();
-	}
+	tracee.pid = tracee.pid ? trace_pid() : trace_program();
 
 	if (tracee.pid) {
 		trace_loop();
