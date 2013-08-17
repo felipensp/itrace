@@ -118,7 +118,7 @@ void resolv_show_maps()
 void resolv_startup()
 {
 	if (!_map_segments()) {
-		iprintf("[!] Failed to read /proc/%d/maps file!", tracee.pid);
+		iprintf("[!] Failed to read /proc/%d/maps file!\n", tracee.pid);
 		return;
 	}
 

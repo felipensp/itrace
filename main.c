@@ -127,6 +127,10 @@ int main(int argc, char **argv)
 		}
 	}
 out:
+	if (!(tracee.pid || tracee.prog)) {
+			usage();
+			exit(0);
+	}
 	tracee.pid = tracee.pid ? trace_pid() : trace_program();
 
 	if (tracee.pid) {

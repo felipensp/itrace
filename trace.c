@@ -82,7 +82,7 @@ void trace_loop()
 
 	while (1) {
 		if (ptrace(PTRACE_SINGLESTEP, tracee.pid, NULL, signo) != 0) {
-			iprintf("ptrace() failed on single-stepping!\n");
+			iprintf("Error: ptrace() failed on single-stepping!\n");
 			exit(1);
 		}
 		wait(&status);
