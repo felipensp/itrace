@@ -280,7 +280,7 @@ void elfsym_shutdown()
 	free(e_info.syms);
 }
 
-const elfsym_sym* elfsym_resolv(uintptr_t addr)
+const elfsym_sym *elfsym_resolv(uintptr_t addr)
 {
 	int i;
 
