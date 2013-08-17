@@ -22,13 +22,21 @@ static const char *_reg_name(enum ud_type reg)
 {
 	switch (reg) {
 		case UD_R_EAX: return e_info.class == 32 ? "eax" : "rax";
+		case UD_R_RAX: return "rax";
 		case UD_R_EBX: return e_info.class == 32 ? "ebx" : "rbx";
+		case UD_R_RBX: return "rbx";
 		case UD_R_ECX: return e_info.class == 32 ? "ecx" : "rcx";
-		case UD_R_EDX: return e_info.class == 32 ? "edx" : "rsx";
+		case UD_R_RCX: return "rcx";
+		case UD_R_EDX: return e_info.class == 32 ? "edx" : "rdx";
+		case UD_R_RDX: return "rdx";
 		case UD_R_ESI: return e_info.class == 32 ? "esi" : "rsi";
+		case UD_R_RSI: return "rsi";
 		case UD_R_EDI: return e_info.class == 32 ? "edi" : "rdi";
+		case UD_R_RDI: return "rdi";
 		case UD_R_ESP: return e_info.class == 32 ? "esp" : "rsp";
+		case UD_R_RSP: return "rsp";
 		case UD_R_EBP: return e_info.class == 32 ? "ebp" : "rbp";
+		case UD_R_RBP: return "rbp";
 		case UD_R_RIP: return e_info.class == 32 ? "eip" : "rip";
 		default:       return "unknown";
 	}
