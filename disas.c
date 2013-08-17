@@ -18,7 +18,7 @@
 /*
  * Returns the register name according to the ELF class
  */
-static const char* _reg_name(enum ud_type reg)
+static const char *_reg_name(enum ud_type reg)
 {
 	switch (reg) {
 		case UD_R_EAX: return e_info.class == 32 ? "eax" : "rax";
@@ -116,7 +116,7 @@ static long _op_value(const ud_operand_t *op, const struct user_regs_struct *reg
 /*
  * Provides additional comments to the disassembled instruction
  */
-static char* _instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
+static char *_instr_comments(ud_t *ud_obj, const struct user_regs_struct *regs)
 {
 	char *comment = NULL;
 
